@@ -389,7 +389,7 @@ export default function Dashboard() {
               </p>
               <div className="mt-4">
                 <p className="text-sm text-emerald-700">
-                  Em nossa história, a Lila já recuperou
+                  Desde que começamos a trabalhar juntos, a Lila já recuperou
                 </p>
                 <p className="text-xl font-bold text-emerald-900">
                   {new Intl.NumberFormat('pt-BR', { 
