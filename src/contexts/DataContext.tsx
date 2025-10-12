@@ -141,6 +141,7 @@ interface DataContextType {
   updateRuler: (id: string, updates: Partial<Ruler>) => Promise<void>;
   deleteRuler: (id: string) => Promise<void>;
   addRuler: (ruler: Omit<Ruler, 'id' | 'created_at'>) => Promise<void>;
+  addInstallment: (installment: Omit<Installment, 'id' | 'created_at'>) => Promise<Installment>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -345,6 +346,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return calculateMetricsForMonth(month, year);
   };
   
+  const addInstallment = async (installment: Omit<Installment, 'id' | 'created_at'>) => {
+    try {
+      const now = new Date().toISOString();
+      const newInstallment: Installment = {
+        id: `installment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        created_at: now,
+        ...installment
+      };
+      
+      // Em um ambiente real, chamaríamos o Supabase aqui
+      // await supabaseSync.insertInstallment(newInstallment);
+      
+      setInstallments(prev => [...prev, newInstallment]);
+      return newInstallment;
+    } catch (err) {
+      console.error('Error adding installment:', err);
+      throw err;
+    }
+  };
+
   const value = useMemo(() => ({
     debtors,
     installments,
@@ -369,7 +390,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     getWorkflow,
     updateRuler,
     deleteRuler,
-    addRuler
+    addRuler,
+    addInstallment
   }), [debtors, installments, conversations, knowledgeEntries, promisesToPay, rulers, isLoading, error, metrics]);
 
   return (

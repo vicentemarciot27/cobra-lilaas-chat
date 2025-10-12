@@ -20,6 +20,7 @@ import {
   Sparkles,
   TrendingUp,
   User,
+  Upload,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,7 @@ import { useData } from "@/contexts/DataContext"
 import { toast } from "sonner"
 import jsPDF from "jspdf"
 import { useNavigate } from "react-router-dom"
+import { CsvImporter } from "@/components/CsvImporter"
 type InvestigationStepStatus = "pending" | "loading" | "completed" | "warning" | "not_found"
 
 type InvestigationStep = {
@@ -58,7 +60,7 @@ type InvestigationData = {
 
 export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
   const router = useNavigate()
-  const { debtors, installments } = useData()
+  const { debtors, installments, addInstallment } = useData()
 
   const [isInvestigating, setIsInvestigating] = useState(false)
   const [investigationComplete, setInvestigationComplete] = useState(false)
@@ -70,6 +72,111 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
   const debtorInstallments = installments.filter((i) => i.debtor_id === debtorId)
   const overdueInstallments = debtorInstallments.filter((i) => i.status === "overdue")
   const totalOwed = overdueInstallments.reduce((sum, i) => sum + i.value, 0)
+
+  const handleImportInstallments = async (data: Record<string, unknown>[]) => {
+    if (!debtor) return;
+    
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const row of data) {
+        try {
+          // Validar campos obrigatórios
+          const dueDateStr = String(row.due_date || '').trim();
+          const valueStr = String(row.value || '').trim();
+          const statusStr = String(row.status || '').trim().toLowerCase();
+          
+          // Verificar se os campos obrigatórios existem
+          if (!dueDateStr || !valueStr || !statusStr) {
+            errorCount++;
+            continue;
+          }
+          
+          // Converter data para formato ISO
+          let dueDate: Date;
+          try {
+            // Tentar detectar formato de data
+            if (dueDateStr.includes('/')) {
+              // Formato BR: DD/MM/YYYY
+              const [day, month, year] = dueDateStr.split('/').map(Number);
+              dueDate = new Date(year, month - 1, day);
+            } else if (dueDateStr.includes('-')) {
+              // Formato ISO: YYYY-MM-DD
+              dueDate = new Date(dueDateStr);
+            } else {
+              throw new Error('Formato de data inválido');
+            }
+            
+            if (isNaN(dueDate.getTime())) {
+              throw new Error('Data inválida');
+            }
+          } catch (err) {
+            errorCount++;
+            continue;
+          }
+          
+          // Converter valor para número
+          const value = parseFloat(valueStr.replace(/[^\d.,]/g, '').replace(',', '.'));
+          if (isNaN(value) || value <= 0) {
+            errorCount++;
+            continue;
+          }
+          
+          // Validar status
+          const validStatus = ['paid', 'overdue', 'renegotiated', 'future'];
+          const status = validStatus.find(s => statusStr.includes(s)) || 'overdue';
+          
+          // Processar data de pagamento (opcional)
+          let paymentDate: string | null = null;
+          if (row.payment_date) {
+            const paymentDateStr = String(row.payment_date).trim();
+            if (paymentDateStr) {
+              try {
+                let paymentDateObj: Date;
+                if (paymentDateStr.includes('/')) {
+                  const [day, month, year] = paymentDateStr.split('/').map(Number);
+                  paymentDateObj = new Date(year, month - 1, day);
+                } else if (paymentDateStr.includes('-')) {
+                  paymentDateObj = new Date(paymentDateStr);
+                } else {
+                  throw new Error('Formato de data inválido');
+                }
+                
+                if (!isNaN(paymentDateObj.getTime())) {
+                  paymentDate = paymentDateObj.toISOString();
+                }
+              } catch (err) {
+                // Ignorar data de pagamento inválida
+              }
+            }
+          }
+          
+          // Criar nova parcela
+          await addInstallment({
+            debtor_id: debtorId,
+            due_date: dueDate.toISOString(),
+            value,
+            status: status as 'paid' | 'renegotiated' | 'overdue' | 'future',
+            payment_date: paymentDate,
+          });
+          
+          successCount++;
+        } catch (err) {
+          errorCount++;
+        }
+      }
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} parcela(s) importada(s) com sucesso!`);
+      }
+      if (errorCount > 0) {
+        toast.error(`${errorCount} parcela(s) com erro(s) de importação.`);
+      }
+    } catch (error) {
+      toast.error('Erro ao importar parcelas do CSV');
+    }
+  };
 
   const initialSteps: InvestigationStep[] = [
     { id: "basic", label: "Validação de dados cadastrais", status: "pending", delay: 600 },
@@ -644,7 +751,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
       doc.setFontSize(9)
       doc.setFont("helvetica", "italic")
       doc.setTextColor(100, 100, 100)
-      doc.text("Fonte: Tratum - Score proprietário baseado em algoritmo de aprendizado de máquina", 20, yPos)
+      doc.text("Fonte: Jusfy - Score proprietário baseado em algoritmo de aprendizado de máquina", 20, yPos)
       doc.setTextColor(0, 0, 0)
       yPos += 12
 
@@ -745,7 +852,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
       doc.setFontSize(10)
       doc.setFont("helvetica", "normal")
       const conclusionText = [
-        "Com base na investigação realizada através da plataforma Tratum e nas informações",
+        "Com base na investigação realizada através da plataforma Jusfy e nas informações",
         "consolidadas neste dossiê, conclui-se que:",
         "",
         "1. O devedor possui capacidade patrimonial comprovada para honrar a dívida em questão;",
@@ -860,7 +967,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
                       <Sparkles className="w-5 h-5 text-primary" />
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Análise completa via Tratum • Processos, Bens e Empresas
+                      Análise completa via Jusfy • Processos, Bens e Empresas
                     </p>
                   </div>
                 </div>
@@ -1053,8 +1160,23 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-4 flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Histórico de Parcelas</CardTitle>
+            <CsvImporter
+              fields={[
+                { label: 'Data de Vencimento', value: 'due_date', required: true },
+                { label: 'Valor', value: 'value', required: true },
+                { label: 'Status', value: 'status', required: true },
+                { label: 'Data de Pagamento', value: 'payment_date', required: false },
+              ]}
+              onImport={handleImportInstallments}
+              variant="outline"
+              size="sm"
+              className="h-9"
+            >
+              <Upload className="h-4 w-4" />
+              Importar CSV
+            </CsvImporter>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border">
@@ -1107,7 +1229,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Tratum Integration Badge */}
+            {/* Jusfy Integration Badge */}
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">

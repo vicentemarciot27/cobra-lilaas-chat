@@ -85,7 +85,7 @@ export default function Dashboard() {
     { label: 'CPF', value: 'cpf', required: true },
     { label: 'Telefone', value: 'phone', required: true },
     { label: 'Email', value: 'email', required: false },
-    { label: 'Apartamento', value: 'apartment', required: false },
+    { label: 'Imóvel', value: 'apartment', required: false },
     { label: 'Perfil', value: 'profile', required: false },
   ];
 
@@ -200,9 +200,11 @@ export default function Dashboard() {
         
         const debtorInstallments = installments.filter(i => i.debtor_id === debtor.id);
         const hasOverdue = debtorInstallments.some(i => i.status === 'overdue');
+        const hasRenegotiated = debtorInstallments.some(i => i.status === 'renegotiated');
         const matchesStatus = statusFilter === 'all' || 
           (statusFilter === 'overdue' && hasOverdue) ||
-          (statusFilter === 'current' && !hasOverdue);
+          (statusFilter === 'current' && !hasOverdue && !hasRenegotiated) ||
+          (statusFilter === 'renegotiated' && hasRenegotiated);
 
         return matchesSearch && matchesProfile && matchesStatus;
       });
@@ -300,6 +302,13 @@ export default function Dashboard() {
   }, [debtors, search, profileFilter, statusFilter, installments, sortField, sortDirection]);
 
   const getDebtorStatus = (debtorId: string) => {
+    // Check if any installment is renegotiated
+    const hasRenegotiated = installments.some(i => i.debtor_id === debtorId && i.status === 'renegotiated');
+    
+    if (hasRenegotiated) {
+      return { label: 'Em Renegociação', variant: 'default' as const };
+    }
+    
     const debtorInstallments = installments
       .filter(i => i.debtor_id === debtorId && i.status === 'overdue')
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
@@ -409,152 +418,35 @@ export default function Dashboard() {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 space-y-8">
           {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight">Painel Geral</h1>
-            <p className="text-muted-foreground text-lg">Visão geral dos seus devedores e cobranças</p>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-bold tracking-tight">Painel Geral</h1>
+              <p className="text-muted-foreground text-lg">Visão geral dos seus devedores e cobranças</p>
+            </div>
           </div>
           
-          <div>
-            <Select
-            
-              value={`${selectedMonth.month},${selectedMonth.year}`}
-              onValueChange={(value) => {
-                const [month, year] = value.split(',').map(Number);
-                const date = new Date(year, month);
-                const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-                setSelectedMonth({ month, year, label });
-              }}
-            >
-              <SelectTrigger className="w-[180px] bg-white">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Mês de análise" />
-              </SelectTrigger>
-              <SelectContent>
-
-                <SelectItem value="8,2025">Setembro/2025</SelectItem>
-                <SelectItem value="7,2025">Agosto/2025</SelectItem>
-                <SelectItem value="6,2025">Julho/2025</SelectItem>
-                <SelectItem value="5,2025">Junho/2025</SelectItem>
-                <SelectItem value="4,2025">Junho/2025</SelectItem>
-                <SelectItem value="3,2025">Maio/2025</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Total Recovered */}
-            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Total Recuperado</p>
-                    <p className="text-3xl font-bold tracking-tight">
-                      {new Intl.NumberFormat('pt-BR', { 
-                        style: 'currency', 
-                        currency: 'BRL',
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      }).format(currentMetrics.totalRecovered)}
-                    </p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <TrendingUp className="h-3 w-3" />
-                      <span className="font-medium">
-                        {currentMetrics.recoveryGrowth > 0 ? '+' : ''}{currentMetrics.recoveryGrowth.toFixed(0)}% vs mês anterior
-                      </span>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 p-3">
-                    <DollarSign className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pending Payments */}
-            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Pendentes</p>
-                    <p className="text-3xl font-bold tracking-tight">
-                      {new Intl.NumberFormat('pt-BR', { 
-                        style: 'currency', 
-                        currency: 'BRL',
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      }).format(currentMetrics.pendingPayments)}
-                    </p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Receipt className="h-3 w-3" />
-                      <span>{currentMetrics.funnel.casesOverdue} parcelas</span>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-gradient-to-br from-rose-500 to-rose-600 p-3">
-                    <Receipt className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recovery Rate */}
-            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Taxa de Recuperação</p>
-                    <p className="text-3xl font-bold tracking-tight">{currentMetrics.recoveryRate.toFixed(1)}%</p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <TrendingUp className="h-3 w-3" />
-                      <span className="font-medium">
-                        {currentMetrics.recoveryRateGrowth > 0 ? '+' : ''}{currentMetrics.recoveryRateGrowth.toFixed(0)}% vs mês anterior
-                      </span>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-gradient-to-br from-blue-500 to-blue-600 p-3">
-                    <Sparkles className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Active Cases */}
-            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Casos Ativos</p>
-                    <p className="text-3xl font-bold tracking-tight">{currentMetrics.activeCases} devedores</p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Users className="h-3 w-3" />
-                      <span>Com mais de 30 dias de atraso</span>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-gradient-to-br from-violet-500 to-violet-600 p-3">
-                    <Users className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Debtors Table */}
-          <Card className="border shadow-sm">
+          {/* Main Content Grid - Tabela à esquerda, métricas à direita */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            {/* Debtors Table - Coluna maior à esquerda */}
+            <div className="lg:col-span-4">
+              {/* Debtors Table */}
+          <Card className="border shadow-sm h-full">
             <CardContent className="p-6 space-y-6">
               {/* Search and Filters */}
-              <div className="flex flex-col md:flex-row items-center gap-4">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-full relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                  </div>
                   <Input
                     placeholder="Buscar por nome ou CPF..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9"
+                    className="pl-9 w-full"
                   />
                 </div>
                 <Select value={profileFilter} onValueChange={setProfileFilter}>
-                  <SelectTrigger className="w-full md:w-48">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Perfil" />
                   </SelectTrigger>
                   <SelectContent>
@@ -565,13 +457,14 @@ export default function Dashboard() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os Status</SelectItem>
                     <SelectItem value="overdue">Em Atraso</SelectItem>
                     <SelectItem value="current">Em Dia</SelectItem>
+                    <SelectItem value="renegotiated">Em Renegociação</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="md:ml-auto w-full md:w-auto">
@@ -618,7 +511,7 @@ export default function Dashboard() {
                       </TableHead>
                       <TableHead>
                         <SortableColumnHeader 
-                          title="Apartamento" 
+                          title="Imóvel" 
                           field="apartment"
                           onSort={(direction) => {
                             setSortField('apartment');
@@ -665,13 +558,13 @@ export default function Dashboard() {
                           <TableCell className="font-medium">{debtor.name}</TableCell>
                           <TableCell className="text-muted-foreground">{debtor.cpf}</TableCell>
                           <TableCell className="text-muted-foreground">{debtor.apartment}</TableCell>
-                          <TableCell>
-                            <Badge variant={status.variant} className="font-normal">
+                          <TableCell className="whitespace-nowrap">
+                            <Badge variant={status.variant} className="font-normal whitespace-nowrap">
                               {status.label}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant={profile.variant} className="gap-1.5 font-normal">
+                          <TableCell className="whitespace-nowrap">
+                            <Badge variant={profile.variant} className="gap-1.5 font-normal whitespace-nowrap">
                               {profile.icon}
                               {profile.label}
                             </Badge>
@@ -714,6 +607,139 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
+            </div>
+
+            {/* Métricas à direita */}
+            <div className="lg:col-span-1">
+              {/* Seletor de Data - Agora visualmente vinculado às métricas */}
+              <Card className="border shadow-sm mb-4">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-medium">Período de Análise</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select
+                    value={`${selectedMonth.month},${selectedMonth.year}`}
+                    onValueChange={(value) => {
+                      const [month, year] = value.split(',').map(Number);
+                      const date = new Date(year, month);
+                      const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                      setSelectedMonth({ month, year, label });
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Mês de análise" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="8,2025">Setembro/2025</SelectItem>
+                      <SelectItem value="7,2025">Agosto/2025</SelectItem>
+                      <SelectItem value="6,2025">Julho/2025</SelectItem>
+                      <SelectItem value="5,2025">Junho/2025</SelectItem>
+                      <SelectItem value="4,2025">Maio/2025</SelectItem>
+                      <SelectItem value="3,2025">Abril/2025</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+
+              {/* Metrics Cards - Agora em formato de coluna */}
+              <div className="space-y-4">
+                {/* Total Recovered */}
+                <Card className="border shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Total Recuperado</p>
+                        <p className="text-2xl font-bold tracking-tight">
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          }).format(currentMetrics.totalRecovered)}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <TrendingUp className="h-3 w-3" />
+                          <span className="font-medium">
+                            {currentMetrics.recoveryGrowth > 0 ? '+' : ''}{currentMetrics.recoveryGrowth.toFixed(0)}% vs mês anterior
+                          </span>
+                        </div>
+                      </div>
+                      <div className="rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 p-3">
+                        <DollarSign className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Pending Payments */}
+                <Card className="border shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Pendentes</p>
+                        <p className="text-2xl font-bold tracking-tight">
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          }).format(currentMetrics.pendingPayments)}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Receipt className="h-3 w-3" />
+                          <span>{currentMetrics.funnel.casesOverdue} parcelas</span>
+                        </div>
+                      </div>
+                      <div className="rounded-full bg-gradient-to-br from-rose-500 to-rose-600 p-3">
+                        <Receipt className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recovery Rate */}
+                <Card className="border shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Taxa de Recuperação</p>
+                        <p className="text-2xl font-bold tracking-tight">{currentMetrics.recoveryRate.toFixed(1)}%</p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <TrendingUp className="h-3 w-3" />
+                          <span className="font-medium">
+                            {currentMetrics.recoveryRateGrowth > 0 ? '+' : ''}{currentMetrics.recoveryRateGrowth.toFixed(0)}% vs mês anterior
+                          </span>
+                        </div>
+                      </div>
+                      <div className="rounded-full bg-gradient-to-br from-blue-500 to-blue-600 p-3">
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Active Cases */}
+                <Card className="border shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Casos Ativos</p>
+                        <p className="text-2xl font-bold tracking-tight">{currentMetrics.activeCases} devedores</p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          <span>Com mais de 30 dias de atraso</span>
+                        </div>
+                      </div>
+                      <div className="rounded-full bg-gradient-to-br from-violet-500 to-violet-600 p-3">
+                        <Users className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </>

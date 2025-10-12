@@ -146,7 +146,7 @@ export function Navbar() {
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  className="group h-9 w-9 hover:bg-accent hover:text-accent-foreground"
+                  className="group h-9 w-9 hover:text-accent-foreground"
                   variant="ghost"
                   size="icon"
                 >

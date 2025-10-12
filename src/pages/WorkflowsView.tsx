@@ -302,7 +302,7 @@ export default function WorkflowsView() {
 
           {/* Timeline Card */}
           <Card
-            className={`p-4 border shadow-sm ${workflow.color} flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow`}
+            className={`py-6 px-4 border shadow-sm ${workflow.color} flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow`}
             onClick={() => navigate(`/canvas?ruler=${workflow.rulerId}`)}
           >
             <div className="flex items-start justify-between mb-4">
