@@ -41,7 +41,7 @@ export const TimelineNodeConfig = ({
     switch (selectedNode.type) {
       case 'start':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 ml-1">
             <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg">
               <p className="text-xs text-muted-foreground">
                 Este é o ponto de início do fluxo de cobrança. Ele será acionado automaticamente quando um pagamento está próximo do vencimento.
@@ -52,7 +52,7 @@ export const TimelineNodeConfig = ({
 
       case 'sendNotification':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 ml-1">
             <div>
               <Label htmlFor="day-offset">Dia da Timeline</Label>
               <div className="flex items-center gap-2 mt-2">
@@ -217,7 +217,7 @@ export const TimelineNodeConfig = ({
 
       case 'notifyOperator':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 ml-1">
             <div>
               <Label htmlFor="day-offset-operator">Dia da Timeline</Label>
               <div className="flex items-center gap-2 mt-2">
@@ -288,7 +288,7 @@ export const TimelineNodeConfig = ({
 
       case 'judicialEscalation':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 ml-1">
             <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-xs text-muted-foreground">
                 ⚠️ Esta ação inicia o processo de cobrança judicial. O caso será enviado para o departamento jurídico.
@@ -327,7 +327,7 @@ export const TimelineNodeConfig = ({
 
       case 'success':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 ml-1">
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
               <p className="text-xs text-muted-foreground">
                 ✅ Nó de conclusão bem-sucedida. O fluxo termina aqui quando o pagamento é recebido.
@@ -338,7 +338,7 @@ export const TimelineNodeConfig = ({
 
       case 'noPayment':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 ml-1">
             <div className="p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
               <p className="text-xs text-muted-foreground">
                 ⚠️ Finaliza o fluxo sem escalação jurídica. Apenas notifica o administrador sobre o não-pagamento.
@@ -371,7 +371,7 @@ export const TimelineNodeConfig = ({
 
       default:
         return (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground ml-1">
             Configurações básicas disponíveis acima.
           </div>
         );
@@ -395,7 +395,7 @@ export const TimelineNodeConfig = ({
 
       {/* Scrollable Config Area */}
       <div className="space-y-4 flex-1 min-h-0 overflow-y-auto pr-2">
-        <div>
+        <div className="ml-1">
           <Label htmlFor="node-label">Nome do Nó</Label>
           <Input
             id="node-label"
