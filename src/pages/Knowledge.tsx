@@ -111,7 +111,7 @@ export default function Knowledge() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -142,7 +142,7 @@ export default function Knowledge() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border shadow-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -209,7 +209,7 @@ export default function Knowledge() {
         {filteredEntries.map(entry => {
           const debtor = debtors.find(d => d.id === entry.debtor_id);
           return (
-            <Card key={entry.id} className="hover:shadow-lg transition-shadow">
+            <Card key={entry.id} className="border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2 flex-1">
@@ -302,7 +302,7 @@ export default function Knowledge() {
       </div>
 
       {filteredEntries.length === 0 && (
-        <Card>
+        <Card className="border shadow-sm">
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">Nenhuma observação encontrada</p>
           </CardContent>

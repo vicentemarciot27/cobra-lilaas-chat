@@ -131,7 +131,7 @@ export default function Analytics() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Economizado</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -151,7 +151,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Tempo Médio de Recuperação</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -166,7 +166,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Casos Fechados</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
@@ -183,7 +183,7 @@ export default function Analytics() {
       </div>
 
       {/* Recovery Rate Trend */}
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
           <CardTitle>Taxa de Recuperação ao Longo do Tempo</CardTitle>
         </CardHeader>
@@ -233,7 +233,7 @@ export default function Analytics() {
       {/* Channel Performance & Funnel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Channel Performance */}
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader>
             <CardTitle>Performance por Canal</CardTitle>
           </CardHeader>
@@ -282,7 +282,7 @@ export default function Analytics() {
         </Card>
 
         {/* Collection Funnel */}
-        <Card>
+        <Card className="border shadow-sm">
           <CardHeader>
             <CardTitle>Funil de Cobrança</CardTitle>
           </CardHeader>
@@ -320,13 +320,13 @@ export default function Analytics() {
       </div>
 
       {/* AI Insights */}
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
           <CardTitle>Recomendações Inteligentes</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card className="border shadow-sm">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
                   <MessageSquare className="h-5 w-5 text-primary mt-0.5" />
@@ -341,14 +341,14 @@ export default function Analytics() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border shadow-sm">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-primary mt-0.5" />
                   <div className="space-y-1">
                     <h4 className="font-semibold text-sm">
-                      {metrics.avgRecoveryDays > 0 
-                        ? `Recuperação em ${metrics.avgRecoveryDays} dias em média` 
+                      {metrics.avgRecoveryDays > 0
+                        ? `Recuperação em ${metrics.avgRecoveryDays} dias em média`
                         : 'Otimize o timing das cobranças'}
                     </h4>
                     <p className="text-xs text-muted-foreground">
@@ -361,14 +361,14 @@ export default function Analytics() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border shadow-sm">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
                   <TrendingUp className="h-5 w-5 text-primary mt-0.5" />
                   <div className="space-y-1">
                     <h4 className="font-semibold text-sm">
-                      {metrics.successRate >= 60 
-                        ? `Excelente taxa de ${metrics.successRate.toFixed(0)}%` 
+                      {metrics.successRate >= 60
+                        ? `Excelente taxa de ${metrics.successRate.toFixed(0)}%`
                         : 'Oportunidade de melhoria'}
                     </h4>
                     <p className="text-xs text-muted-foreground">

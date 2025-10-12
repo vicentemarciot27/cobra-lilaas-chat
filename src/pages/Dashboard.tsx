@@ -286,7 +286,7 @@ export default function Dashboard() {
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Recovered */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
@@ -312,7 +312,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Pending Payments */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
@@ -338,7 +338,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Recovery Rate */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
@@ -357,7 +357,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Active Cases */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
@@ -377,7 +377,7 @@ export default function Dashboard() {
           </div>
 
           {/* Debtors Table */}
-          <Card>
+          <Card className="border shadow-sm">
             <CardContent className="p-6 space-y-6">
               {/* Search and Filters */}
               <div className="flex flex-col md:flex-row items-center gap-4">

@@ -128,7 +128,7 @@ const AgentConfigCard = ({
   const negotiationId = `negotiation-${cohortId}`;
 
   return (
-    <Card className="p-5 shadow-card border-2 bg-white">
+    <Card className="p-5 border shadow-sm bg-white">
       <div className="flex items-center gap-3 mb-4 pb-2 border-b">
         <div className="w-8 rounded-full flex items-center justify-center">
           <Bot className="w-5 text-primary" />
@@ -258,7 +258,7 @@ export default function WorkflowsView() {
   }, [rulers, debtors]);
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-4">
+    <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-4xl font-bold tracking-tight">Réguas de Cobrança</h1>
@@ -280,8 +280,8 @@ export default function WorkflowsView() {
               />
 
               {/* Timeline Card */}
-              <Card 
-                className={`p-6 shadow-card border-2 ${workflow.color} flex flex-col justify-center cursor-pointer hover:shadow-lg transition-shadow`}
+              <Card
+                className={`p-6 border shadow-sm ${workflow.color} flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow`}
                 onClick={() => navigate(`/canvas?ruler=${workflow.rulerId}`)}
               >
                 <div className="flex items-start justify-between mb-4">
