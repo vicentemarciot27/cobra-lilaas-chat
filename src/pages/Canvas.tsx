@@ -28,6 +28,7 @@ import {
 } from '@/components/workflow/TimelineNodes';
 import { TimelineNodeLibrary, timelineNodeTypes } from '@/components/workflow/TimelineNodeLibrary';
 import { TimelineNodeConfig } from '@/components/workflow/TimelineNodeConfig';
+import { BuilderAgent } from '@/components/workflow/BuilderAgent';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -263,6 +264,28 @@ function CanvasFlow() {
       }
     },
     [nodes, setNodes, validateAndUpdateNodes]
+  );
+
+  // Apply workflow from Builder Agent
+  const onApplyWorkflow = useCallback(
+    (newNodes: Node[], newEdges: Edge[]) => {
+      setNodes(newNodes);
+      setEdges(newEdges);
+      validateAndUpdateNodes(newNodes);
+      setHasUnsavedChanges(true);
+      
+      // Fit view after applying workflow
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({ 
+            padding: 0.2,
+            duration: 400,
+            maxZoom: 1,
+          });
+        }
+      }, 50);
+    },
+    [setNodes, setEdges, validateAndUpdateNodes, reactFlowInstance]
   );
 
   // Load template
@@ -513,17 +536,25 @@ function CanvasFlow() {
           </ReactFlow>
         </div>
 
-        {/* Configuration Panel Sidebar */}
-        <div className="w-80 border-l bg-card flex-shrink-0 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4">
-            <TimelineNodeConfig
-              selectedNode={selectedNode}
-              onClose={() => setSelectedNode(null)}
-              onUpdate={onNodeUpdate}
-              onDelete={onNodeDelete}
-              onDuplicate={onNodeDuplicate}
+        {/* Configuration Panel / Builder Agent Sidebar */}
+        <div className="w-[450px] border-l bg-card flex-shrink-0 overflow-hidden flex flex-col">
+          {selectedNode ? (
+            <div className="flex-1 overflow-y-auto p-4">
+              <TimelineNodeConfig
+                selectedNode={selectedNode}
+                onClose={() => setSelectedNode(null)}
+                onUpdate={onNodeUpdate}
+                onDelete={onNodeDelete}
+                onDuplicate={onNodeDuplicate}
+              />
+            </div>
+          ) : (
+            <BuilderAgent 
+              onApplyWorkflow={onApplyWorkflow}
+              currentNodes={nodes}
+              currentEdges={edges}
             />
-          </div>
+          )}
         </div>
       </div>
 
