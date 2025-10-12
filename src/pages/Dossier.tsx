@@ -1,476 +1,860 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Search, Scale, AlertTriangle, Building2, Home, Car, Target, Circle, CheckCircle2, Clock, MessageSquare, Brain, Download, Mail } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useData } from '@/contexts/DataContext';
-import { toast } from 'sonner';
+"use client"
+
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import {
+  ArrowLeft,
+  Search,
+  Scale,
+  AlertTriangle,
+  Building2,
+  Home,
+  CheckCircle2,
+  MessageSquare,
+  Brain,
+  Download,
+  Mail,
+  Loader2,
+  FileText,
+  Phone,
+  X,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Separator } from "@/components/ui/separator"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useData } from "@/contexts/DataContext"
+import { toast } from "sonner"
+import jsPDF from "jspdf"
+
+type InvestigationStepStatus = "pending" | "loading" | "completed" | "warning" | "not_found"
 
 type InvestigationStep = {
-  label: string;
-  completed: boolean;
-};
+  id: string
+  label: string
+  status: InvestigationStepStatus
+  result?: string
+  delay: number
+}
 
-export default function Dossier() {
-  const { debtorId } = useParams<{ debtorId: string }>();
-  const { debtors, installments } = useData();
-  const [isInvestigating, setIsInvestigating] = useState(false);
-  const [investigationComplete, setInvestigationComplete] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
-  const [pdfProgress, setPdfProgress] = useState(0);
-  const [pdfComplete, setPdfComplete] = useState(false);
+type InvestigationData = {
+  judicialProcesses: Array<{ type: string; court: string; value: number; status: string }>
+  protests: Array<{ date: string; value: number; creditor: string }>
+  companies: Array<{ name: string; cnpj: string; ownership: number }>
+  realEstate: Array<{ address: string; value: number }>
+  vehicles: Array<{ brand: string; model: string; year: number; value: number }>
+  socialMedia: Array<{ platform: string; post: string; estimatedValue: number }>
+  totalWealth: number
+  totalDebts: number
+  hasConfusaoPatrimonial: boolean
+  riskScore: number
+}
 
-  const debtor = debtors.find(d => d.id === debtorId);
-  const debtorInstallments = installments.filter(i => i.debtor_id === debtorId);
-  const overdueInstallments = debtorInstallments.filter(i => i.status === 'overdue');
-  const totalOwed = overdueInstallments.reduce((sum, i) => sum + i.value, 0);
+export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
+  const router = useNavigate()
+  const { debtors, installments } = useData()
 
-  const investigationSteps: InvestigationStep[] = [
-    { label: 'Buscando processos judiciais...', completed: false },
-    { label: 'Verificando protestos em cartório...', completed: false },
-    { label: 'Consultando registros de empresas...', completed: false },
-    { label: 'Analisando patrimônio imobiliário...', completed: false },
-    { label: 'Cruzando dados de veículos...', completed: false },
-    { label: 'Calculando score de risco...', completed: false },
-  ];
+  const [isInvestigating, setIsInvestigating] = useState(false)
+  const [investigationComplete, setInvestigationComplete] = useState(false)
+  const [showInvestigationModal, setShowInvestigationModal] = useState(false)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [investigationData, setInvestigationData] = useState<InvestigationData | null>(null)
 
-  const [steps, setSteps] = useState(investigationSteps);
+  const debtor = debtors.find((d) => d.id === debtorId)
+  const debtorInstallments = installments.filter((i) => i.debtor_id === debtorId)
+  const overdueInstallments = debtorInstallments.filter((i) => i.status === "overdue")
+  const totalOwed = overdueInstallments.reduce((sum, i) => sum + i.value, 0)
 
-  const handleInvestigate = async () => {
-    setIsInvestigating(true);
-    setCurrentStep(0);
+  const initialSteps: InvestigationStep[] = [
+    { id: "basic", label: "Validação de dados cadastrais", status: "pending", delay: 600 },
+    { id: "judicial", label: "Processos judiciais (Tribunais)", status: "pending", delay: 900 },
+    { id: "protests", label: "Protestos em cartório", status: "pending", delay: 800 },
+    { id: "debts", label: "Dívidas ativas (Receita Federal)", status: "pending", delay: 700 },
+    { id: "companies", label: "Quadro societário (Tratum)", status: "pending", delay: 1000 },
+    { id: "assets", label: "Patrimônio (Imóveis e Veículos)", status: "pending", delay: 900 },
+    { id: "social", label: "Monitoramento de mídias sociais", status: "pending", delay: 800 },
+  ]
 
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setCurrentStep(i + 1);
-      setSteps(prev => prev.map((step, idx) => 
-        idx <= i ? { ...step, completed: true } : step
-      ));
+  const [investigationSteps, setInvestigationSteps] = useState<InvestigationStep[]>(initialSteps)
+
+  const runInvestigation = async () => {
+    if (!debtor) return
+
+    setIsInvestigating(true)
+    setInvestigationComplete(false)
+
+    setInvestigationSteps((prev) => prev.map((step) => ({ ...step, status: "pending" as const })))
+
+    for (let i = 0; i < investigationSteps.length; i++) {
+      const step = investigationSteps[i]
+
+      setInvestigationSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, status: "loading" as const } : s)))
+
+      await new Promise((resolve) => setTimeout(resolve, step.delay))
+
+      let status: InvestigationStepStatus = "completed"
+      let result = ""
+
+      switch (step.id) {
+        case "basic":
+          result = "✓ Validado"
+          break
+        case "judicial":
+          status = "warning"
+          result = "⚠️ 3 processos ativos"
+          break
+        case "protests":
+          status = "warning"
+          result = "⚠️ 2 protestos (R$ 15.000)"
+          break
+        case "debts":
+          result = "✓ Sem pendências federais"
+          break
+        case "companies":
+          status = "warning"
+          result = "⚠️ 2 empresas (confusão patrimonial)"
+          break
+        case "assets":
+          result = "✓ 2 imóveis, 2 veículos"
+          break
+        case "social":
+          result = "✓ 3 evidências de alto padrão"
+          break
+      }
+
+      setInvestigationSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, status, result } : s)))
     }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setIsInvestigating(false);
-    setInvestigationComplete(true);
-  };
+    setInvestigationData({
+      judicialProcesses: [
+        { type: "Execução Fiscal", court: "Justiça Federal - 1ª Vara", value: 8500, status: "Em andamento" },
+        {
+          type: "Ação de Cobrança",
+          court: "Justiça Estadual - 3ª Vara Cível",
+          value: 12000,
+          status: "Citação pendente",
+        },
+        { type: "Ação Trabalhista", court: "TRT - 2ª Região", value: 25000, status: "Audiência marcada" },
+      ],
+      protests: [
+        { date: "2024-08-15", value: 8500, creditor: "Banco XYZ S.A." },
+        { date: "2024-09-22", value: 6500, creditor: "Financeira ABC Ltda" },
+      ],
+      companies: [
+        { name: "Alpha Serviços Ltda", cnpj: "12.345.678/0001-90", ownership: 65 },
+        { name: "Beta Comércio ME", cnpj: "98.765.432/0001-10", ownership: 100 },
+      ],
+      realEstate: [
+        { address: "Rua das Flores, 123 - Centro, São Paulo/SP", value: 650000 },
+        { address: "Av. Atlântica, 456 - Copacabana, Rio de Janeiro/RJ", value: 890000 },
+      ],
+      vehicles: [
+        { brand: "BMW", model: "X5 M Sport", year: 2022, value: 480000 },
+        { brand: "Porsche", model: "Cayenne Turbo", year: 2021, value: 720000 },
+      ],
+      socialMedia: [
+        { platform: "Instagram", post: "Resort Maldivas - 7 dias em água villa", estimatedValue: 65000 },
+        { platform: "Instagram", post: "Rolex Daytona Ouro Branco", estimatedValue: 180000 },
+        { platform: "Instagram", post: "Jantar D.O.M. (3 Estrelas Michelin)", estimatedValue: 4500 },
+      ],
+      totalWealth: 2989500,
+      totalDebts: 60500,
+      hasConfusaoPatrimonial: true,
+      riskScore: 78,
+    })
 
-  const getRiskScore = () => {
-    if (!debtor) return 50;
-    switch (debtor.profile) {
-      case 'good_payer': return 35;
-      case 'bad_payer': return 75;
-      case 'new': return 55;
-      default: return 50;
+    setIsInvestigating(false)
+    setInvestigationComplete(true)
+    toast.success("Investigação concluída!")
+  }
+
+  const generatePDF = async () => {
+    if (!debtor) return
+
+    setIsGeneratingPdf(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    let yPos = 20
+
+    doc.setFontSize(20)
+    doc.setFont("helvetica", "bold")
+    doc.text("DOSSIE LEGAL - LILAAS COBRA AI", pageWidth / 2, yPos, { align: "center" })
+    yPos += 10
+
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "normal")
+    doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, pageWidth / 2, yPos, { align: "center" })
+    yPos += 5
+    doc.setFontSize(8)
+    doc.setTextColor(100, 100, 100)
+    doc.text("Powered by Tratum - Analise Reputacional e Credito", pageWidth / 2, yPos, { align: "center" })
+    doc.setTextColor(0, 0, 0)
+    yPos += 15
+
+    doc.setFontSize(14)
+    doc.setFont("helvetica", "bold")
+    doc.text("1. FUNDAMENTO LEGAL", 15, yPos)
+    yPos += 8
+
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "normal")
+    doc.text("Codigo de Processo Civil, Art. 784, X - Titulo executivo extrajudicial", 15, yPos)
+    yPos += 6
+    doc.text("Lei 8.078/90 (CDC) - Cobranca de divida condominial", 15, yPos)
+    yPos += 12
+
+    doc.setFontSize(14)
+    doc.setFont("helvetica", "bold")
+    doc.text("2. DADOS DO DEVEDOR", 15, yPos)
+    yPos += 8
+
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "normal")
+    doc.text(`Nome: ${debtor.name}`, 15, yPos)
+    yPos += 6
+    doc.text(`CPF: ${debtor.cpf}`, 15, yPos)
+    yPos += 6
+    doc.text(`Apartamento: ${debtor.apartment}`, 15, yPos)
+    yPos += 6
+    doc.text(`Telefone: ${debtor.phone || "Nao informado"}`, 15, yPos)
+    yPos += 6
+    doc.text(`Email: ${debtor.email || "Nao informado"}`, 15, yPos)
+    yPos += 12
+
+    doc.setFontSize(14)
+    doc.setFont("helvetica", "bold")
+    doc.text("3. DADOS FINANCEIROS", 15, yPos)
+    yPos += 8
+
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "normal")
+    doc.text(`Valor em Aberto: R$ ${totalOwed.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 15, yPos)
+    yPos += 6
+    doc.text(`Parcelas em Atraso: ${overdueInstallments.length}`, 15, yPos)
+    yPos += 12
+
+    if (investigationData) {
+      doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
+      doc.text("4. PROCESSOS JUDICIAIS (TRATUM)", 15, yPos)
+      yPos += 8
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      investigationData.judicialProcesses.forEach((process) => {
+        doc.text(`- ${process.type} | ${process.court}`, 20, yPos)
+        yPos += 5
+        doc.text(`  Valor: R$ ${process.value.toLocaleString("pt-BR")} | Status: ${process.status}`, 20, yPos)
+        yPos += 5
+      })
+      yPos += 5
+
+      doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
+      doc.text("5. PROTESTOS E RESTRICOES", 15, yPos)
+      yPos += 8
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      investigationData.protests.forEach((protest) => {
+        doc.text(
+          `- Data: ${new Date(protest.date).toLocaleDateString("pt-BR")} | R$ ${protest.value.toLocaleString("pt-BR")}`,
+          20,
+          yPos,
+        )
+        yPos += 5
+        doc.text(`  Credor: ${protest.creditor}`, 20, yPos)
+        yPos += 5
+      })
+      yPos += 5
+
+      if (yPos > 240) {
+        doc.addPage()
+        yPos = 20
+      }
+
+      doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
+      doc.text("6. INVESTIGACAO PATRIMONIAL", 15, yPos)
+      yPos += 8
+
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text("6.1 Quadro Societario (Tratum):", 15, yPos)
+      yPos += 6
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      investigationData.companies.forEach((company) => {
+        doc.text(`- ${company.name} (${company.cnpj}) - ${company.ownership}% de participacao`, 20, yPos)
+        yPos += 5
+      })
+      yPos += 5
+
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text("6.2 Imoveis (Cartorio):", 15, yPos)
+      yPos += 6
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      investigationData.realEstate.forEach((property) => {
+        doc.text(`- ${property.address}`, 20, yPos)
+        yPos += 5
+        doc.text(`  Valor estimado: R$ ${property.value.toLocaleString("pt-BR")}`, 20, yPos)
+        yPos += 5
+      })
+      yPos += 5
+
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text("6.3 Veiculos (DETRAN):", 15, yPos)
+      yPos += 6
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      investigationData.vehicles.forEach((vehicle) => {
+        doc.text(`- ${vehicle.brand} ${vehicle.model} (${vehicle.year})`, 20, yPos)
+        yPos += 5
+        doc.text(`  Valor FIPE: R$ ${vehicle.value.toLocaleString("pt-BR")}`, 20, yPos)
+        yPos += 5
+      })
+      yPos += 10
+
+      if (investigationData.hasConfusaoPatrimonial) {
+        doc.setFontSize(12)
+        doc.setFont("helvetica", "bold")
+        doc.setTextColor(255, 0, 0)
+        doc.text("ALERTA: CONFUSAO PATRIMONIAL DETECTADA", 15, yPos)
+        yPos += 6
+        doc.setTextColor(0, 0, 0)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(10)
+        doc.text("Detectada mistura de patrimonios pessoal e empresarial.", 15, yPos)
+        yPos += 5
+        doc.text("Recomenda-se desconsideracao da personalidade juridica.", 15, yPos)
+        yPos += 10
+      }
+
+      doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
+      doc.text("7. ANALISE DE RISCO (TRATUM)", 15, yPos)
+      yPos += 8
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      doc.text(`Score de Risco: ${investigationData.riskScore}/100`, 15, yPos)
+      yPos += 6
+      doc.text(`Total de Dividas Identificadas: R$ ${investigationData.totalDebts.toLocaleString("pt-BR")}`, 15, yPos)
+      yPos += 6
+      doc.text(`Patrimonio Estimado Total: R$ ${investigationData.totalWealth.toLocaleString("pt-BR")}`, 15, yPos)
+      yPos += 6
+      doc.setFont("helvetica", "bold")
+      doc.text(
+        `Capacidade de Pagamento: ${((investigationData.totalWealth / investigationData.totalDebts) * 100).toFixed(0)}%`,
+        15,
+        yPos,
+      )
+      yPos += 10
     }
-  };
 
-  const handleGeneratePdf = async () => {
-    setIsPdfGenerating(true);
-    setPdfProgress(0);
-    setPdfComplete(false);
+    doc.setFontSize(8)
+    doc.setFont("helvetica", "italic")
+    doc.text("Documento gerado pelo CollectAI com dados da Tratum", pageWidth / 2, 280, { align: "center" })
 
-    const pdfSteps = [
-      'Compilando dados do devedor',
-      'Anexando logs de conversação',
-      'Incluindo resultados da investigação',
-      'Formatando documento jurídico',
-      'Gerando PDF'
-    ];
+    const fileName = `dossier_${debtor.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`
+    doc.save(fileName)
 
-    for (let i = 0; i < pdfSteps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      setPdfProgress(((i + 1) / pdfSteps.length) * 100);
+    setIsGeneratingPdf(false)
+    toast.success("Dossiê gerado! Verifique seus downloads.")
+  }
+
+  const getStepIcon = (status: InvestigationStep["status"]) => {
+    switch (status) {
+      case "loading":
+        return <Loader2 className="w-4 h-4 animate-spin text-primary" />
+      case "completed":
+        return <CheckCircle2 className="w-4 h-4 text-green-600" />
+      case "warning":
+        return <AlertTriangle className="w-4 h-4 text-yellow-600" />
+      case "not_found":
+        return <X className="w-4 h-4 text-muted-foreground" />
+      default:
+        return <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />
     }
+  }
 
-    setPdfComplete(true);
-    setIsPdfGenerating(false);
-  };
-
-  const handleDownload = () => {
-    toast.success('Dossiê baixado com sucesso');
-    setPdfComplete(false);
-  };
-
-  const handleEmail = () => {
-    toast.success('Dossiê enviado para juridico@empresa.com');
-    setPdfComplete(false);
-  };
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: any; label: string }> = {
+      paid: { variant: "default", label: "Pago" },
+      renegotiated: { variant: "default", label: "Renegociado" },
+      overdue: { variant: "destructive", label: "Em Atraso" },
+      future: { variant: "secondary", label: "Futuro" },
+    }
+    return variants[status] || variants.overdue
+  }
 
   if (!debtor) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <p>Devedor não encontrado</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground">Devedor não encontrado</p>
+          <Button className="mt-4" onClick={() => router("/dashboard")}>
+            Voltar ao Dashboard
+          </Button>
+        </div>
       </div>
-    );
+    )
   }
 
-  const riskScore = getRiskScore();
-
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/dashboard">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Investigação Patrimonial</h1>
-          <p className="text-muted-foreground">{debtor.name}</p>
+    <div className="min-h-screen bg-background">
+      <div className="border-b bg-card">
+        <div className="container mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold">{debtor.name}</h1>
+                <p className="text-muted-foreground mt-1">
+                  {debtor.apartment} • {debtor.cpf}
+                </p>
+              </div>
+            </div>
+            <Badge
+              variant={
+                debtor.profile === "good_payer"
+                  ? "default"
+                  : debtor.profile === "bad_payer"
+                    ? "destructive"
+                    : "secondary"
+              }
+              className="text-sm px-3 py-1"
+            >
+              {debtor.profile === "good_payer"
+                ? "Bom Pagador"
+                : debtor.profile === "bad_payer"
+                  ? "Mau Pagador"
+                  : "Novo"}
+            </Badge>
+          </div>
         </div>
       </div>
 
-      {/* Debtor Profile Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Perfil do Devedor</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Nome</p>
-                <p className="font-medium">{debtor.name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">CPF</p>
-                <p className="font-medium">{debtor.cpf}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Telefone</p>
-                <p className="font-medium">{debtor.phone}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">{debtor.email}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Apartamento</p>
-                <p className="font-medium">{debtor.apartment}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Perfil</p>
-                <Badge variant={debtor.profile === 'good_payer' ? 'default' : debtor.profile === 'bad_payer' ? 'destructive' : 'secondary'}>
-                  {debtor.profile === 'good_payer' ? 'Bom Pagador' : debtor.profile === 'bad_payer' ? 'Mau Pagador' : 'Novo'}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total em Atraso</p>
-                <p className="font-medium text-destructive">R$ {totalOwed.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Data de Cadastro</p>
-                <p className="font-medium">
-                  {new Date(debtor.created_at).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Investigation Panel */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Investigação Financeira e Patrimonial</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Powered by Tratum API</p>
-            </div>
-            {!investigationComplete && !isInvestigating && (
-              <Button onClick={handleInvestigate}>
-                <Search className="mr-2 h-4 w-4" />
-                Investigar Devedor
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!isInvestigating && !investigationComplete && (
-            <div className="text-center py-12 space-y-4">
-              <Search className="h-16 w-16 text-muted-foreground mx-auto" />
-              <div>
-                <h3 className="font-semibold text-lg">Investigação Completa</h3>
-                <p className="text-muted-foreground">
-                  Analise processos judiciais, protestos, patrimônio e muito mais
-                </p>
-              </div>
-            </div>
-          )}
-
-          {isInvestigating && (
-            <div className="space-y-3 py-4">
-              {steps.map((step, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  {step.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
-                  ) : idx === currentStep ? (
-                    <Clock className="h-5 w-5 text-primary flex-shrink-0 animate-pulse" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  )}
-                  <span className={step.completed ? 'text-foreground' : 'text-muted-foreground'}>
-                    {step.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {investigationComplete && (
-            <div className="space-y-6">
-              {/* Results Table */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Scale className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Processos Judiciais</p>
-                      <p className="text-sm text-muted-foreground">Nenhum processo encontrado</p>
-                    </div>
+      <main className="container mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <Card className="lg:col-span-2 shadow-lg border-2 hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Search className="w-6 h-6 text-primary" />
                   </div>
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Nenhum
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Protestos em Cartório</p>
-                      <p className="text-sm text-muted-foreground">R$800, registrado em 2024</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    1 ativo
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Empresas</p>
-                      <p className="text-sm text-muted-foreground">"Silva Ltda"</p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Diretor
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Home className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Imóveis</p>
-                      <p className="text-sm text-muted-foreground">R$250k valor estimado</p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    1 imóvel
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Car className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Veículos</p>
-                      <p className="text-sm text-muted-foreground">2019 Honda Civic</p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    1 veículo
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Target className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Score de Risco</p>
-                      <p className="text-sm text-muted-foreground">Risco médio</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary">
-                    {riskScore}/100
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Key Findings */}
-              <Card className="bg-muted/50">
-                <CardContent className="pt-6">
-                  <h4 className="font-semibold mb-3">Principais Descobertas</h4>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex gap-2">
-                      <span className="text-primary">•</span>
-                      <span>Patrimônio Estimado: R$280k</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="text-primary">•</span>
-                      <span>Dívidas Totais: R$12k (protestos)</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="text-primary">•</span>
-                      <span>Alerta: Patrimônio sugere viabilidade de cobrança</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="text-primary">•</span>
-                      <span><strong>Recomendação:</strong> Oferecer acordo com garantia de bens</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Activity Timeline */}
-      {investigationComplete && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Linha do Tempo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { date: debtor.created_at, label: 'Cadastro realizado', icon: Circle },
-                { date: overdueInstallments[0]?.due_date || debtor.created_at, label: 'Primeiro pagamento em atraso', icon: Clock },
-                { date: debtor.updated_at, label: 'Última atualização de dados', icon: CheckCircle2 },
-                { date: new Date().toISOString(), label: 'Investigação realizada', icon: Search },
-              ].map((event, idx) => (
-                <div key={idx} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <event.icon className="h-5 w-5 text-primary" />
-                    {idx < 3 && <div className="w-0.5 h-full bg-border mt-2" />}
-                  </div>
-                  <div className="pb-8">
-                    <p className="font-medium">{event.label}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(event.date).toLocaleDateString('pt-BR')}
+                  <div>
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                      Investigação Patrimonial
+                      <Sparkles className="w-5 h-5 text-primary" />
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Análise completa via Tratum • Processos, Bens e Empresas
                     </p>
                   </div>
                 </div>
-              ))}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-3">
+                    <img src="/tratum.png" alt="Tratum" width={32} height={32} />
+                  <div>
+                    <div className="font-semibold">Powered by Tratum</div>
+                    <div className="text-xs text-muted-foreground">Análise reputacional e crédito</div>
+                  </div>
+                </div>
+                <Badge variant="outline" className="bg-background">
+                  ✓ Conectado
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Scale className="w-4 h-4 text-muted-foreground" />
+                  <span>Processos Judiciais</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  <span>Quadro Societário</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Home className="w-4 h-4 text-muted-foreground" />
+                  <span>Imóveis e Veículos</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                  <span>Protestos e Dívidas</span>
+                </div>
+              </div>
+
+              <Button
+                size="lg"
+                className="w-full text-base font-semibold"
+                onClick={() => {
+                  setShowInvestigationModal(true)
+                  setTimeout(() => runInvestigation(), 500)
+                }}
+                disabled={isInvestigating}
+              >
+                {isInvestigating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Investigando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5 mr-2" />
+                    Iniciar Investigação Completa
+                  </>
+                )}
+              </Button>
+
+              {investigationComplete && investigationData && (
+                <div className="pt-4 border-t space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Última investigação:</span>
+                    <span className="font-medium">{new Date().toLocaleDateString("pt-BR")}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center p-2 bg-muted/50 rounded">
+                      <div className="text-lg font-bold text-destructive">
+                        {investigationData.judicialProcesses.length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Processos</div>
+                    </div>
+                    <div className="text-center p-2 bg-muted/50 rounded">
+                      <div className="text-lg font-bold text-primary">{investigationData.companies.length}</div>
+                      <div className="text-xs text-muted-foreground">Empresas</div>
+                    </div>
+                    <div className="text-center p-2 bg-muted/50 rounded">
+                      <div className="text-lg font-bold">{investigationData.riskScore}</div>
+                      <div className="text-xs text-muted-foreground">Score</div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent"
+                    onClick={generatePDF}
+                    disabled={isGeneratingPdf}
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Gerando PDF...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar Dossiê Completo
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Resumo Financeiro</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Valor em Atraso</p>
+                <p className="text-3xl font-bold text-destructive">
+                  R$ {totalOwed.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Parcelas em atraso</span>
+                  <span className="font-semibold">{overdueInstallments.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total de parcelas</span>
+                  <span className="font-semibold">{debtorInstallments.length}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Contato</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <span>{debtor.phone || "Não informado"}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <span className="truncate">{debtor.email || "Não informado"}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Ações Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => toast.info("Chat feature coming soon!")}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Iniciar Conversa
+                </Button>
+                <Button variant="outline" onClick={() => toast.info("Knowledge base coming soon!")}>
+                  <Brain className="w-4 h-4 mr-2" />
+                  Base de Conhecimento
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Histórico de Parcelas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {debtorInstallments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                        Nenhuma parcela encontrada
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    debtorInstallments.map((installment) => {
+                      const statusInfo = getStatusBadge(installment.status)
+                      return (
+                        <TableRow key={installment.id}>
+                          <TableCell>{new Date(installment.due_date).toLocaleDateString("pt-BR")}</TableCell>
+                          <TableCell className="font-medium">
+                            R$ {installment.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
-      )}
+      </main>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-4">
-        <Button asChild>
-          <Link to={`/chat/${debtorId}`}>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Iniciar Chat
-          </Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link to="/knowledge">
-            <Brain className="mr-2 h-4 w-4" />
-            Ver Conhecimento
-          </Link>
-        </Button>
-        {investigationComplete && (
-          <Button variant="outline" onClick={() => setIsPdfGenerating(true)}>
-            <Download className="mr-2 h-4 w-4" />
-            Gerar Dossiê PDF
-          </Button>
-        )}
-      </div>
-
-      {/* PDF Generation Dialog */}
-      <Dialog open={isPdfGenerating || pdfComplete} onOpenChange={(open) => {
-        if (!open) {
-          setIsPdfGenerating(false);
-          setPdfComplete(false);
-        }
-      }}>
-        <DialogContent>
+      {/* Investigation Modal */}
+      <Dialog open={showInvestigationModal} onOpenChange={setShowInvestigationModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {pdfComplete ? 'Dossiê Pronto!' : 'Gerando Dossiê Jurídico...'}
+            <DialogTitle className="flex items-center gap-3">
+              <Search className="w-5 h-5" />
+              Investigação Patrimonial: {debtor.name}
             </DialogTitle>
           </DialogHeader>
-          
-          {!pdfComplete ? (
-            <div className="space-y-4 py-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Progresso</span>
-                  <span>{Math.round(pdfProgress)}%</span>
-                </div>
-                <Progress value={pdfProgress} className="h-2" />
-              </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span>Compilando dados do devedor</span>
+          <div className="space-y-6 py-4">
+            {/* Tratum Integration Badge */}
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <img src="/tratum.png" alt="Tratum" width={32} height={32} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span>Anexando logs de conversação</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span>Incluindo resultados da investigação</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {pdfProgress >= 80 ? (
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                  ) : (
-                    <Clock className="h-4 w-4 text-primary animate-pulse" />
-                  )}
-                  <span>Formatando documento jurídico</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {pdfProgress >= 100 ? (
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                  ) : (
-                    <Circle className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span>Gerando PDF</span>
+                <div>
+                  <div className="font-semibold text-sm">Powered by Tratum</div>
+                  <div className="text-xs text-muted-foreground">Análise reputacional e crédito</div>
                 </div>
               </div>
+              <Badge variant="outline" className="bg-background">
+                ✓ Conectado
+              </Badge>
             </div>
-          ) : (
-            <div className="space-y-4 py-4">
-              <div className="text-center">
-                <CheckCircle2 className="h-16 w-16 text-success mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Seu documento está pronto para download.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={handleDownload}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Baixar PDF
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={handleEmail}>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Enviar por Email
-                </Button>
-              </div>
+
+            {/* Investigation Steps */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase">Etapas da Investigação</h3>
+
+              {investigationSteps.map((step) => (
+                <div
+                  key={step.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {getStepIcon(step.status)}
+                    <span className={`font-medium ${step.status === "loading" ? "text-primary" : ""}`}>
+                      {step.label}
+                    </span>
+                  </div>
+                  {step.result && <span className="text-sm text-muted-foreground">{step.result}</span>}
+                </div>
+              ))}
             </div>
-          )}
+
+            {/* Results Summary */}
+            {investigationComplete && investigationData && (
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase">Resultados da Investigação</h3>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <Card className="p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Processos Judiciais</div>
+                    <div className="text-xl font-bold text-red-600">{investigationData.judicialProcesses.length}</div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Protestos</div>
+                    <div className="text-xl font-bold text-yellow-600">{investigationData.protests.length}</div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Score Risco</div>
+                    <div className="text-xl font-bold text-orange-600">{investigationData.riskScore}/100</div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Empresas</div>
+                    <div className="text-xl font-bold text-blue-600">{investigationData.companies.length}</div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Imóveis</div>
+                    <div className="text-xl font-bold text-green-600">{investigationData.realEstate.length}</div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Veículos</div>
+                    <div className="text-xl font-bold text-purple-600">{investigationData.vehicles.length}</div>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Card className="p-4 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                    <div className="text-xs text-muted-foreground mb-1">Dívidas Identificadas</div>
+                    <div className="text-lg font-bold text-red-600">
+                      R$ {investigationData.totalDebts.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </div>
+                  </Card>
+                  <Card className="p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                    <div className="text-xs text-muted-foreground mb-1">Patrimônio Estimado</div>
+                    <div className="text-lg font-bold text-green-600">
+                      R$ {investigationData.totalWealth.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </div>
+                  </Card>
+                </div>
+
+                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <div className="text-sm font-semibold mb-2">Capacidade de Pagamento</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {((investigationData.totalWealth / investigationData.totalDebts) * 100).toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Patrimônio rastreável e penhorável (CPC Art. 835)
+                  </div>
+                </Card>
+
+                {investigationData.hasConfusaoPatrimonial && (
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-600" />
+                      <div className="font-semibold text-amber-800 dark:text-amber-400">
+                        Alerta: Confusão Patrimonial
+                      </div>
+                    </div>
+                    <div className="text-sm text-amber-900 dark:text-amber-300">
+                      Detectada mistura de patrimônios pessoal e empresarial. Recomenda-se análise jurídica para
+                      desconsideração da personalidade jurídica.
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs text-muted-foreground text-center pt-2 border-t">
+                  <div className="flex items-center justify-center gap-1 mt-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span>Dados atualizados via Tratum</span>
+                  </div>
+                  <div className="text-[10px] opacity-70 mt-1">{new Date().toLocaleString("pt-BR")}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowInvestigationModal(false)} className="flex-1">
+                Fechar
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowInvestigationModal(false)
+                  generatePDF()
+                }}
+                disabled={!investigationComplete || isGeneratingPdf}
+                className="flex-1"
+              >
+                {isGeneratingPdf ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Gerando PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Gerar Dossiê Completo
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Generation Modal */}
+      <Dialog open={isGeneratingPdf} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Gerando Dossiê Legal
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-6">
+            <div className="flex justify-center">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            </div>
+            <div className="text-center space-y-2">
+              <div className="font-medium">Compilando informações...</div>
+              <div className="text-sm text-muted-foreground">Gerando documento com dados da investigação Tratum</div>
+            </div>
+            <Progress value={66} className="h-2" />
+          </div>
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }
