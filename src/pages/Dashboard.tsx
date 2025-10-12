@@ -556,8 +556,8 @@ export default function Dashboard() {
                       return (
                         <TableRow key={debtor.id} className="group">
                           <TableCell className="font-medium">{debtor.name}</TableCell>
-                          <TableCell className="text-muted-foreground">{debtor.cpf}</TableCell>
-                          <TableCell className="text-muted-foreground">{debtor.apartment}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{debtor.cpf}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{debtor.apartment}</TableCell>
                           <TableCell className="whitespace-nowrap">
                             <Badge variant={status.variant} className="font-normal whitespace-nowrap">
                               {status.label}
