@@ -69,7 +69,7 @@ export default function Analytics() {
     
     return months.map((month, idx) => {
       const progress = (idx + 1) / months.length;
-      const before = 45 + Math.random() * 8 - 8; // Variação em torno de 45%
+      const before = 45 + Math.random() * 8 - 24; // Variação em torno de 45%
       const after = 45 + progress * (currentRate - 45); // Progressão até taxa atual
       return {
         month,
