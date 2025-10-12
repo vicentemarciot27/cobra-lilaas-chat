@@ -7,6 +7,7 @@ import { DataProvider } from "@/contexts/DataContext";
 import { Navbar } from "@/components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Canvas from "./pages/Canvas";
+import WorkflowsView from "./pages/WorkflowsView";
 import Chat from "./pages/Chat";
 import Knowledge from "./pages/Knowledge";
 import Analytics from "./pages/Analytics";
@@ -15,30 +16,46 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <DataProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <div className="min-h-screen w-full bg-background">
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/canvas" element={<Canvas />} />
-              <Route path="/chat/:debtorId" element={<Chat />} />
-              <Route path="/knowledge" element={<Knowledge />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/dossier/:debtorId" element={<Dossier />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-        </BrowserRouter>
-      </DataProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+import { useLocation } from "react-router-dom";
+
+const App = () => {
+  // Wrap App to use react-router hooks (outside BrowserRouter is fine in v6)
+  const MainContent = () => {
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const hasRulerParam = searchParams.has('ruler');
+    const isCanvasEditor = location.pathname === "/canvas" && hasRulerParam;
+
+    return (
+      <div className="min-h-screen w-full bg-background">
+        {!isCanvasEditor && <Navbar />}
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/canvas" element={hasRulerParam ? <Canvas /> : <WorkflowsView />} />
+          <Route path="/chat/:debtorId" element={<Chat />} />
+          <Route path="/knowledge" element={<Knowledge />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/dossier/:debtorId" element={<Dossier />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
+    );
+  };
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <DataProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <MainContent />
+          </BrowserRouter>
+        </DataProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

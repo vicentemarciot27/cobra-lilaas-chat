@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, AlertTriangle, TrendingUp, Users, MessageSquare, FileText, Brain, Receipt, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Users, MessageSquare, FileText, Brain, Receipt, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -118,59 +118,69 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+            {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">Visão geral da sua operação de cobrança</p>
+      </div>
       {/* Performance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="border-l-4 border-l-success">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Recuperado</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {metrics.totalRecovered.toFixed(2)}</div>
-            <p className="text-xs text-success flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3" />
-              23% vs mês anterior
-            </p>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.totalRecovered)}
+            </div>
+            <div className="flex items-center text-xs text-success mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +23% vs mês anterior
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="border-l-4 border-l-destructive">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pagamentos Pendentes</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <Receipt className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {metrics.pendingPayments.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {installments.filter(i => i.status === 'overdue').length} parcelas em atraso
-            </p>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.pendingPayments)}
+            </div>
+            <div className="flex items-center text-xs text-destructive mt-1">
+              <TrendingDown className="h-3 w-3 mr-1" />
+              {installments.filter(i => i.status === 'overdue').length} parcelas atrasadas
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="border-l-4 border-l-primary">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Taxa de Recuperação</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.recoveryRate.toFixed(1)}%</div>
-            <p className="text-xs text-success flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3" />
-              +15% vs mês anterior
-            </p>
+            <div className="flex items-center text-xs text-primary mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +12% vs mês anterior
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="border-l-4 border-l-accent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Casos Ativos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-accent-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.activeCases}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Devedores com pagamentos pendentes
-            </p>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -53,7 +53,7 @@ export default function Knowledge() {
       case 'approved':
         return <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" />Aprovado</Badge>;
       case 'pending':
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Pendente</Badge>;
+        return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Pendente</Badge>;
       case 'rejected':
         return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Rejeitado</Badge>;
     }
@@ -179,9 +179,14 @@ export default function Knowledge() {
                       {getCategoryIcon(entry.category)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base line-clamp-1">{entry.title}</CardTitle>
+                      <CardTitle className="text-base line-clamp-1">
+                        {debtor?.name}
+                        {debtor?.cpf ? (
+                          <> • {debtor.cpf.slice(-6)}</>
+                        ) : null}
+                      </CardTitle>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {debtor?.name} • {debtor?.cpf.slice(-6)}
+                        {entry.title}
                       </p>
                     </div>
                   </div>

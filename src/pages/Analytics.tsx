@@ -184,13 +184,13 @@ export default function Analytics() {
               <div key={item.stage} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{item.stage}</span>
-                  <Badge variant="secondary">
+                  <Badge variant="outline">
                     {item.value} ({item.conversion}%)
                   </Badge>
                 </div>
                 <div className="h-8 bg-muted rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-xs text-white font-medium transition-all"
+                    className="h-full bg-primary flex items-center justify-center text-xs text-white font-medium transition-all"
                     style={{ width: `${item.conversion}%` }}
                   >
                     {item.conversion}%
