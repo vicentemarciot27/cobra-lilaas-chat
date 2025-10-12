@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import {
+  initialPromisesToPay,
+  initialRulers
+} from '@/data/defaults';
+
+import {
   initialDebtors,
   initialInstallments,
   initialConversations,
   initialKnowledgeEntries,
-  initialPromisesToPay,
-  initialRulers
-} from '@/data/defaults';
+} from '@/data/initial_dataset';
 
 // Types
 export type DebtorProfile = 'good_payer' | 'bad_payer' | 'new';

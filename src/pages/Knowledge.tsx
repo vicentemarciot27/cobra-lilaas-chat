@@ -17,6 +17,7 @@ export default function Knowledge() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [personFilter, setPersonFilter] = useState('all');
   const [editingEntry, setEditingEntry] = useState<KnowledgeEntry | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
@@ -30,12 +31,13 @@ export default function Knowledge() {
       const matchesCategory = categoryFilter === 'all' || entry.category === categoryFilter;
       const matchesSource = sourceFilter === 'all' || entry.source === sourceFilter;
       const matchesStatus = statusFilter === 'all' || entry.status === statusFilter;
+      const matchesPerson = personFilter === 'all' || entry.debtor_id === personFilter;
 
-      return matchesSearch && matchesCategory && matchesSource && matchesStatus;
+      return matchesSearch && matchesCategory && matchesSource && matchesStatus && matchesPerson;
     });
-  }, [knowledgeEntries, search, categoryFilter, sourceFilter, statusFilter]);
+  }, [knowledgeEntries, search, categoryFilter, sourceFilter, statusFilter, personFilter]);
 
-  const getCategoryIcon = (category: KnowledgeCategory) => {
+  const getCategoryIcon = (category: KnowledgeCategory) => {    
     switch (category) {
       case 'behavior':
         return <TrendingUp className="h-4 w-4" />;
@@ -160,6 +162,19 @@ export default function Knowledge() {
                 <SelectItem value="approved">Aprovado</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
                 <SelectItem value="rejected">Rejeitado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={personFilter} onValueChange={setPersonFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Devedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Devedores</SelectItem>
+                {debtors.map(d => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name} ({d.cpf})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
