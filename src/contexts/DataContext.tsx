@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import { useSupabaseSync } from '@/hooks/use-supabase-sync';
 import {
   initialDebtors,
   initialInstallments,
@@ -114,19 +115,22 @@ interface DataContextType {
   knowledgeEntries: KnowledgeEntry[];
   promisesToPay: PromiseToPay[];
   rulers: Ruler[];
-  addDebtor: (debtor: Debtor) => void;
-  updateDebtor: (id: string, updates: Partial<Debtor>) => void;
-  addMessage: (conversationId: string, message: Message) => void;
-  addKnowledgeEntry: (entry: KnowledgeEntry) => void;
-  updateKnowledgeEntry: (id: string, updates: Partial<KnowledgeEntry>) => void;
-  approveKnowledge: (id: string) => void;
-  rejectKnowledge: (id: string) => void;
-  addPromiseToPay: (promise: PromiseToPay) => void;
-  saveWorkflow: (rulerId: string, workflowData: WorkflowData) => void;
+  isLoading: boolean;
+  error: Error | null;
+  refreshData: () => Promise<void>;
+  addDebtor: (debtor: Omit<Debtor, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateDebtor: (id: string, updates: Partial<Debtor>) => Promise<void>;
+  addMessage: (conversationId: string, message: Omit<Message, 'timestamp'>) => Promise<void>;
+  addKnowledgeEntry: (entry: Omit<KnowledgeEntry, 'id' | 'created_at'>) => Promise<void>;
+  updateKnowledgeEntry: (id: string, updates: Partial<KnowledgeEntry>) => Promise<void>;
+  approveKnowledge: (id: string) => Promise<void>;
+  rejectKnowledge: (id: string) => Promise<void>;
+  addPromiseToPay: (promise: Omit<PromiseToPay, 'id' | 'created_at'>) => Promise<void>;
+  saveWorkflow: (rulerId: string, workflowData: WorkflowData) => Promise<void>;
   getWorkflow: (rulerId: string) => WorkflowData | null;
-  updateRuler: (id: string, updates: Partial<Ruler>) => void;
-  deleteRuler: (id: string) => void;
-  addRuler: (ruler: Ruler) => void;
+  updateRuler: (id: string, updates: Partial<Ruler>) => Promise<void>;
+  deleteRuler: (id: string) => Promise<void>;
+  addRuler: (ruler: Omit<Ruler, 'id' | 'created_at'>) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -138,49 +142,139 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [knowledgeEntries, setKnowledgeEntries] = useState<KnowledgeEntry[]>(initialKnowledgeEntries);
   const [promisesToPay, setPromisesToPay] = useState<PromiseToPay[]>(initialPromisesToPay);
   const [rulers, setRulers] = useState<Ruler[]>(initialRulers);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const addDebtor = (debtor: Debtor) => {
-    setDebtors(prev => [...prev, debtor]);
+  const supabaseSync = useSupabaseSync();
+
+  // Load data from Supabase on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const [
+        debtorsData,
+        installmentsData,
+        conversationsData,
+        knowledgeData,
+        promisesData,
+        rulersData,
+      ] = await Promise.all([
+        supabaseSync.fetchDebtors(),
+        supabaseSync.fetchInstallments(),
+        supabaseSync.fetchConversations(),
+        supabaseSync.fetchKnowledgeEntries(),
+        supabaseSync.fetchPromisesToPay(),
+        supabaseSync.fetchRulers(),
+      ]);
+
+      setDebtors(debtorsData);
+      setInstallments(installmentsData);
+      setConversations(conversationsData);
+      setKnowledgeEntries(knowledgeData);
+      setPromisesToPay(promisesData);
+      setRulers(rulersData);
+    } catch (err) {
+      console.error('Error loading data from Supabase:', err);
+      setError(err as Error);
+      // Keep using default data on error
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateDebtor = (id: string, updates: Partial<Debtor>) => {
-    setDebtors(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  const refreshData = async () => {
+    await loadData();
   };
 
-  const addMessage = (conversationId: string, message: Message) => {
-    setConversations(prev => prev.map(c => 
-      c.id === conversationId 
-        ? { ...c, messages: [...c.messages, message], updated_at: new Date().toISOString() }
-        : c
-    ));
+  const addDebtor = async (debtor: Omit<Debtor, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const newDebtor = await supabaseSync.insertDebtor(debtor);
+      setDebtors(prev => [...prev, newDebtor]);
+    } catch (err) {
+      console.error('Error adding debtor:', err);
+      throw err;
+    }
   };
 
-  const addKnowledgeEntry = (entry: KnowledgeEntry) => {
-    setKnowledgeEntries(prev => [...prev, entry]);
+  const updateDebtor = async (id: string, updates: Partial<Debtor>) => {
+    try {
+      const updatedDebtor = await supabaseSync.updateDebtor(id, updates);
+      setDebtors(prev => prev.map(d => d.id === id ? updatedDebtor : d));
+    } catch (err) {
+      console.error('Error updating debtor:', err);
+      throw err;
+    }
   };
 
-  const updateKnowledgeEntry = (id: string, updates: Partial<KnowledgeEntry>) => {
-    setKnowledgeEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  const addMessage = async (conversationId: string, message: Omit<Message, 'timestamp'>) => {
+    try {
+      await supabaseSync.insertMessage(conversationId, message);
+      // Refresh conversations to get the new message
+      const conversationsData = await supabaseSync.fetchConversations();
+      setConversations(conversationsData);
+    } catch (err) {
+      console.error('Error adding message:', err);
+      throw err;
+    }
   };
 
-  const approveKnowledge = (id: string) => {
-    updateKnowledgeEntry(id, { status: 'approved' });
+  const addKnowledgeEntry = async (entry: Omit<KnowledgeEntry, 'id' | 'created_at'>) => {
+    try {
+      const newEntry = await supabaseSync.insertKnowledgeEntry(entry);
+      setKnowledgeEntries(prev => [...prev, newEntry]);
+    } catch (err) {
+      console.error('Error adding knowledge entry:', err);
+      throw err;
+    }
   };
 
-  const rejectKnowledge = (id: string) => {
-    updateKnowledgeEntry(id, { status: 'rejected' });
+  const updateKnowledgeEntry = async (id: string, updates: Partial<KnowledgeEntry>) => {
+    try {
+      const updatedEntry = await supabaseSync.updateKnowledgeEntry(id, updates);
+      setKnowledgeEntries(prev => prev.map(e => e.id === id ? updatedEntry : e));
+    } catch (err) {
+      console.error('Error updating knowledge entry:', err);
+      throw err;
+    }
   };
 
-  const addPromiseToPay = (promise: PromiseToPay) => {
-    setPromisesToPay(prev => [...prev, promise]);
+  const approveKnowledge = async (id: string) => {
+    await updateKnowledgeEntry(id, { status: 'approved' });
   };
 
-  const saveWorkflow = (rulerId: string, workflowData: WorkflowData) => {
-    setRulers(prev => prev.map(r => 
-      r.id === rulerId 
-        ? { ...r, json_data: { ...r.json_data, workflow: workflowData } }
-        : r
-    ));
+  const rejectKnowledge = async (id: string) => {
+    await updateKnowledgeEntry(id, { status: 'rejected' });
+  };
+
+  const addPromiseToPay = async (promise: Omit<PromiseToPay, 'id' | 'created_at'>) => {
+    try {
+      const newPromise = await supabaseSync.insertPromiseToPay(promise);
+      setPromisesToPay(prev => [...prev, newPromise]);
+    } catch (err) {
+      console.error('Error adding promise to pay:', err);
+      throw err;
+    }
+  };
+
+  const saveWorkflow = async (rulerId: string, workflowData: WorkflowData) => {
+    try {
+      const ruler = rulers.find(r => r.id === rulerId);
+      if (!ruler) throw new Error('Ruler not found');
+
+      const updatedRuler = await supabaseSync.updateRuler(rulerId, {
+        json_data: { ...ruler.json_data, workflow: workflowData }
+      });
+      setRulers(prev => prev.map(r => r.id === rulerId ? updatedRuler : r));
+    } catch (err) {
+      console.error('Error saving workflow:', err);
+      throw err;
+    }
   };
 
   const getWorkflow = (rulerId: string): WorkflowData | null => {
@@ -190,16 +284,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return workflow || null;
   };
 
-  const updateRuler = (id: string, updates: Partial<Ruler>) => {
-    setRulers(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  const updateRuler = async (id: string, updates: Partial<Ruler>) => {
+    try {
+      const updatedRuler = await supabaseSync.updateRuler(id, updates);
+      setRulers(prev => prev.map(r => r.id === id ? updatedRuler : r));
+    } catch (err) {
+      console.error('Error updating ruler:', err);
+      throw err;
+    }
   };
 
-  const deleteRuler = (id: string) => {
-    setRulers(prev => prev.filter(r => r.id !== id));
+  const deleteRuler = async (id: string) => {
+    try {
+      await supabaseSync.deleteRuler(id);
+      setRulers(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      console.error('Error deleting ruler:', err);
+      throw err;
+    }
   };
 
-  const addRuler = (ruler: Ruler) => {
-    setRulers(prev => [...prev, ruler]);
+  const addRuler = async (ruler: Omit<Ruler, 'id' | 'created_at'>) => {
+    try {
+      const newRuler = await supabaseSync.insertRuler(ruler);
+      setRulers(prev => [...prev, newRuler]);
+    } catch (err) {
+      console.error('Error adding ruler:', err);
+      throw err;
+    }
   };
 
   const value = useMemo(() => ({
@@ -209,6 +321,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     knowledgeEntries,
     promisesToPay,
     rulers,
+    isLoading,
+    error,
+    refreshData,
     addDebtor,
     updateDebtor,
     addMessage,
@@ -222,7 +337,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateRuler,
     deleteRuler,
     addRuler
-  }), [debtors, installments, conversations, knowledgeEntries, promisesToPay, rulers]);
+  }), [debtors, installments, conversations, knowledgeEntries, promisesToPay, rulers, isLoading, error]);
 
   return (
     <DataContext.Provider value={value}>

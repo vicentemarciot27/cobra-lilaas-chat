@@ -156,21 +156,28 @@ export default function Dashboard() {
   }, [metrics.totalRecovered]);
 
   const filteredDebtors = useMemo(() => {
-    return debtors.filter(debtor => {
-      const matchesSearch = search === '' || 
-        debtor.name.toLowerCase().includes(search.toLowerCase()) ||
-        debtor.cpf.includes(search);
-      
-      const matchesProfile = profileFilter === 'all' || debtor.profile === profileFilter;
-      
-      const debtorInstallments = installments.filter(i => i.debtor_id === debtor.id);
-      const hasOverdue = debtorInstallments.some(i => i.status === 'overdue');
-      const matchesStatus = statusFilter === 'all' || 
-        (statusFilter === 'overdue' && hasOverdue) ||
-        (statusFilter === 'current' && !hasOverdue);
+    return debtors
+      .filter(debtor => {
+        const matchesSearch = search === '' || 
+          debtor.name.toLowerCase().includes(search.toLowerCase()) ||
+          debtor.cpf.includes(search);
+        
+        const matchesProfile = profileFilter === 'all' || debtor.profile === profileFilter;
+        
+        const debtorInstallments = installments.filter(i => i.debtor_id === debtor.id);
+        const hasOverdue = debtorInstallments.some(i => i.status === 'overdue');
+        const matchesStatus = statusFilter === 'all' || 
+          (statusFilter === 'overdue' && hasOverdue) ||
+          (statusFilter === 'current' && !hasOverdue);
 
-      return matchesSearch && matchesProfile && matchesStatus;
-    });
+        return matchesSearch && matchesProfile && matchesStatus;
+      })
+      .sort((a, b) => {
+        // Matheus Santoro sempre no topo
+        if (a.name === 'Matheus Santoro') return -1;
+        if (b.name === 'Matheus Santoro') return 1;
+        return 0;
+      });
   }, [debtors, search, profileFilter, statusFilter, installments]);
 
   const getDebtorStatus = (debtorId: string) => {
