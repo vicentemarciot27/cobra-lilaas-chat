@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DataProvider } from "@/contexts/DataContext";
+import { DataLoadingWrapper } from "@/components/DataLoadingWrapper";
 import { Navbar } from "@/components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Canvas from "./pages/Canvas";
@@ -47,11 +48,13 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <DataProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <MainContent />
-          </BrowserRouter>
+          <DataLoadingWrapper>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <MainContent />
+            </BrowserRouter>
+          </DataLoadingWrapper>
         </DataProvider>
       </TooltipProvider>
     </QueryClientProvider>

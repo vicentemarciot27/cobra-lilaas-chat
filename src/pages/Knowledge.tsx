@@ -61,30 +61,39 @@ export default function Knowledge() {
     }
   };
 
-  const handleApprove = (id: string) => {
-    approveKnowledge(id);
-    toast.success('Observação aprovada');
-  };
-
-  const handleReject = (id: string) => {
-    rejectKnowledge(id);
-    toast.success('Observação rejeitada');
-  };
-
-  const handleSave = (entry: KnowledgeEntry) => {
-    if (editingEntry) {
-      updateKnowledgeEntry(entry.id, entry);
-      toast.success('Observação atualizada');
-    } else {
-      addKnowledgeEntry({
-        ...entry,
-        id: `k-${Date.now()}`,
-        created_at: new Date().toISOString()
-      });
-      toast.success('Observação criada');
+  const handleApprove = async (id: string) => {
+    try {
+      await approveKnowledge(id);
+      toast.success('Observação aprovada');
+    } catch (error) {
+      toast.error('Erro ao aprovar observação');
     }
-    setEditingEntry(null);
-    setIsAddDialogOpen(false);
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await rejectKnowledge(id);
+      toast.success('Observação rejeitada');
+    } catch (error) {
+      toast.error('Erro ao rejeitar observação');
+    }
+  };
+
+  const handleSave = async (entry: KnowledgeEntry) => {
+    try {
+      if (editingEntry) {
+        await updateKnowledgeEntry(entry.id, entry);
+        toast.success('Observação atualizada');
+      } else {
+        const { id, created_at, ...entryData } = entry;
+        await addKnowledgeEntry(entryData);
+        toast.success('Observação criada');
+      }
+      setEditingEntry(null);
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      toast.error('Erro ao salvar observação');
+    }
   };
 
   return (

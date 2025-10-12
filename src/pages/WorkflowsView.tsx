@@ -72,15 +72,15 @@ const convertNodesToTimelineEvents = (nodes: any[]): TimelineEvent[] => {
  */
 const getWorkflowColor = (profile: string) => {
   if (profile === 'good_payer') {
-    return 'bg-emerald-50 border-emerald-300';
+    return 'bg-emerald-50/50 border-gray-200';
   }
   if (profile === 'bad_payer') {
-    return 'bg-orange-50 border-orange-300';
+    return 'bg-orange-50/50 border-gray-200';
   }
   if (profile === 'new') {
-    return 'bg-blue-50 border-blue-300';
+    return 'bg-blue-50/50 border-gray-200';
   }
-  return 'bg-gray-100 border-gray-300';
+  return 'bg-gray-100 border-gray-200';
 };
 
 const AgentConfigCard = ({ 
