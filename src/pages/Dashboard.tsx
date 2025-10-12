@@ -245,38 +245,30 @@ export default function Dashboard() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl text-center">🎉 Parabéns!</DialogTitle>
-            <DialogDescription className="text-center space-y-4 pt-4">
-              <div className="text-4xl font-bold text-success">
+            <DialogDescription className="text-center space-y-6 pt-6">
+              <div className="text-5xl font-bold text-success">
                 {new Intl.NumberFormat('pt-BR', { 
                   style: 'currency', 
                   currency: 'BRL' 
                 }).format(metrics.totalRecovered)}
               </div>
-              <p className="text-lg">
-                Nós recuperamos <span className="font-semibold text-foreground">
-                  {new Intl.NumberFormat('pt-BR', { 
-                    style: 'currency', 
-                    currency: 'BRL' 
-                  }).format(metrics.totalRecovered)}
-                </span>!
+              <p className="text-xl font-semibold">
+                Recuperamos este valor para você!
               </p>
-              <p className="text-sm text-muted-foreground">
-                Total de valores já recuperados pela Lila
-              </p>
-              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Com base no seu desempenho anterior, sem a Lila você teria recebido apenas:
-                </p>
-                <p className="text-2xl font-bold text-foreground">
-                  {new Intl.NumberFormat('pt-BR', { 
-                    style: 'currency', 
-                    currency: 'BRL' 
-                  }).format(metrics.totalRecovered * 0.6)}
-                </p>
-              </div>
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-center mt-4">
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg border border-emerald-200">
+              <p className="text-sm text-emerald-800 font-medium mb-2">
+                🚀 A Lila fez você ganhar <span className="font-bold text-emerald-900">+40% a mais</span> do que você receberia sem ela!
+              </p>
+              <p className="text-lg font-bold text-emerald-900">
+                +{new Intl.NumberFormat('pt-BR', { 
+                  style: 'currency', 
+                  currency: 'BRL' 
+                }).format(metrics.totalRecovered * 0.4)} extras
+              </p>
+            </div>
             <Button onClick={() => setShowWelcomeModal(false)} className="w-full">
               Continuar
             </Button>
