@@ -22,18 +22,32 @@ export default function Knowledge() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const filteredEntries = useMemo(() => {
-    return knowledgeEntries.filter(entry => {
-      const matchesSearch = search === '' || 
+    const filtered = knowledgeEntries.filter(entry => {
+      const matchesSearch = search === '' ||
         entry.title.toLowerCase().includes(search.toLowerCase()) ||
         entry.content.toLowerCase().includes(search.toLowerCase()) ||
         entry.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
-      
+
       const matchesCategory = categoryFilter === 'all' || entry.category === categoryFilter;
       const matchesSource = sourceFilter === 'all' || entry.source === sourceFilter;
       const matchesStatus = statusFilter === 'all' || entry.status === statusFilter;
       const matchesPerson = personFilter === 'all' || entry.debtor_id === personFilter;
 
       return matchesSearch && matchesCategory && matchesSource && matchesStatus && matchesPerson;
+    });
+
+    // Ordenar: entradas pendentes primeiro, depois por data de criação (mais recentes primeiro)
+    return filtered.sort((a, b) => {
+      // Primeiro, ordenar por status: pending vem antes de approved/rejected
+      if (a.status === 'pending' && b.status !== 'pending') {
+        return -1;
+      }
+      if (a.status !== 'pending' && b.status === 'pending') {
+        return 1;
+      }
+
+      // Se ambos têm mesmo status, ordenar por data de criação (mais recentes primeiro)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [knowledgeEntries, search, categoryFilter, sourceFilter, statusFilter, personFilter]);
 
