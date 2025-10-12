@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, HelpCircle, User, Settings, LogOut, Users, CreditCard, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -78,11 +78,27 @@ const HamburgerIcon = ({ className, ...props }: React.SVGAttributes<SVGElement>)
 export function Navbar() {
   const [isMobile, setIsMobile] = useState(false);
   const location = useLocation();
-  const { knowledgeEntries, promisesToPay } = useData();
+  const navigate = useNavigate();
+  const { knowledgeEntries, promisesToPay, debtors } = useData();
   const containerRef = useRef<HTMLElement>(null);
 
   const notificationCount = knowledgeEntries.filter(k => k.status === 'pending').length +
     promisesToPay.filter(p => !p.fulfilled && new Date(p.promised_datetime) <= new Date()).length;
+
+  // Helper function to get debtor name by ID
+  const getDebtorName = (debtorId: string) => {
+    const debtor = debtors.find(d => d.id === debtorId);
+    return debtor?.name || '';
+  };
+
+  // Navigation handlers for notifications
+  const handleKnowledgeNotificationClick = (knowledgeId: string) => {
+    navigate('/knowledge');
+  };
+
+  const handlePaymentNotificationClick = (paymentId: string) => {
+    navigate('/canvas');
+  };
 
   const navLinks = [
     { href: '/dashboard', label: 'Painel Geral' },
@@ -231,15 +247,23 @@ export function Navbar() {
                 <DropdownMenuLabel>Notificações</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {knowledgeEntries.filter(k => k.status === 'pending').slice(0, 3).map(k => (
-                  <DropdownMenuItem key={k.id}>
+                  <DropdownMenuItem
+                    key={k.id}
+                    onClick={() => handleKnowledgeNotificationClick(k.id)}
+                    className="cursor-pointer"
+                  >
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">Nova observação pendente</p>
-                      <p className="text-xs text-muted-foreground">{k.title}</p>
+                      <p className="text-sm font-medium">{getDebtorName(k.debtor_id)} - {k.title}</p>
+                      <p className="text-xs text-muted-foreground">Nova observação pendente</p>
                     </div>
                   </DropdownMenuItem>
                 ))}
                 {promisesToPay.filter(p => !p.fulfilled && new Date(p.promised_datetime) <= new Date()).slice(0, 2).map(p => (
-                  <DropdownMenuItem key={p.id}>
+                  <DropdownMenuItem
+                    key={p.id}
+                    onClick={() => handlePaymentNotificationClick(p.id)}
+                    className="cursor-pointer"
+                  >
                     <div className="flex flex-col gap-1">
                       <p className="text-sm font-medium">Promessa de pagamento vencendo</p>
                       <p className="text-xs text-muted-foreground">
@@ -254,7 +278,10 @@ export function Navbar() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate('/knowledge')}
+                  className="cursor-pointer"
+                >
                   Ver todas as notificações
                 </DropdownMenuItem>
               </DropdownMenuContent>

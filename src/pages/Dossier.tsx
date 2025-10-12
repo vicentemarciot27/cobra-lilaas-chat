@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
 import {
   ArrowLeft,
   Search,
@@ -33,7 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useData } from "@/contexts/DataContext"
 import { toast } from "sonner"
 import jsPDF from "jspdf"
-
+import { useNavigate } from "react-router-dom"
 type InvestigationStepStatus = "pending" | "loading" | "completed" | "warning" | "not_found"
 
 type InvestigationStep = {
@@ -184,199 +183,595 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
-    let yPos = 20
+    const pageHeight = doc.internal.pageSize.getHeight()
+    let yPos = 0
 
-    doc.setFontSize(20)
-    doc.setFont("helvetica", "bold")
-    doc.text("DOSSIE LEGAL - LILAAS COBRA AI", pageWidth / 2, yPos, { align: "center" })
-    yPos += 10
+    // Helper function to add header on each page
+    const addHeader = () => {
+      // Header background
+      doc.setFillColor(94, 27, 104) // Purple color
+      doc.rect(0, 0, pageWidth, 35, 'F')
+      
+      // Logo placeholder (you would need to convert SVG to base64 or use image)
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(24)
+      doc.setFont("helvetica", "bold")
+      doc.text("lilaas.ai", 15, 20)
+      
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      doc.text("Cobra AI - Inteligência em Cobrança", 15, 27)
+      
+      // Document info on the right
+      doc.setFontSize(8)
+      doc.setTextColor(255, 255, 255)
+      doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`, pageWidth - 15, 15, { align: "right" })
+      doc.text("Documento Confidencial", pageWidth - 15, 20, { align: "right" })
+      doc.text("Powered by Tratum", pageWidth - 15, 25, { align: "right" })
+      
+      // Reset text color
+      doc.setTextColor(0, 0, 0)
+      
+      return 45 // Return starting Y position after header
+    }
 
-    doc.setFontSize(10)
-    doc.setFont("helvetica", "normal")
-    doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, pageWidth / 2, yPos, { align: "center" })
+    // Helper function to add footer
+    const addFooter = (pageNum: number) => {
+      doc.setFontSize(8)
+      doc.setTextColor(100, 100, 100)
+      doc.setFont("helvetica", "italic")
+      
+      // Line separator
+      doc.setDrawColor(200, 200, 200)
+      doc.line(15, pageHeight - 20, pageWidth - 15, pageHeight - 20)
+      
+      // Footer text
+      doc.text(`Lilaas Cobra AI - Dossiê Legal e Investigação Patrimonial`, pageWidth / 2, pageHeight - 15, { align: "center" })
+      doc.text(`Este documento contém informações confidenciais e é protegido por sigilo profissional`, pageWidth / 2, pageHeight - 11, { align: "center" })
+      doc.text(`Página ${pageNum}`, pageWidth - 15, pageHeight - 15, { align: "right" })
+      
+      doc.setTextColor(0, 0, 0)
+    }
+
+    // Helper function to check if new page is needed
+    const checkNewPage = (spaceNeeded: number, currentPage: number) => {
+      if (yPos + spaceNeeded > pageHeight - 30) {
+        addFooter(currentPage)
+        doc.addPage()
+        currentPage++
+        yPos = addHeader()
+      }
+      return currentPage
+    }
+
+    let currentPage = 1
+    yPos = addHeader()
     yPos += 5
-    doc.setFontSize(8)
-    doc.setTextColor(100, 100, 100)
-    doc.text("Powered by Tratum - Analise Reputacional e Credito", pageWidth / 2, yPos, { align: "center" })
+
+    // Title Box
+    doc.setFillColor(240, 240, 255)
+    doc.roundedRect(15, yPos, pageWidth - 30, 25, 3, 3, 'F')
+    doc.setDrawColor(94, 27, 104)
+    doc.roundedRect(15, yPos, pageWidth - 30, 25, 3, 3, 'S')
+    
+    yPos += 8
+    doc.setFontSize(18)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(94, 27, 104)
+    doc.text("DOSSIÊ LEGAL - INVESTIGAÇÃO PATRIMONIAL", pageWidth / 2, yPos, { align: "center" })
+    yPos += 7
+    doc.setFontSize(12)
+    doc.setFont("helvetica", "normal")
+    doc.text(`Referente ao devedor: ${debtor.name.toUpperCase()}`, pageWidth / 2, yPos, { align: "center" })
     doc.setTextColor(0, 0, 0)
     yPos += 15
 
-    doc.setFontSize(14)
+    // Section 1: Legal Foundation
+    currentPage = checkNewPage(40, currentPage)
+    
+    doc.setFillColor(94, 27, 104)
+    doc.rect(15, yPos, 5, 8, 'F')
+    doc.setFontSize(13)
     doc.setFont("helvetica", "bold")
-    doc.text("1. FUNDAMENTO LEGAL", 15, yPos)
-    yPos += 8
+    doc.setTextColor(94, 27, 104)
+    doc.text("I. FUNDAMENTO LEGAL E NORMATIVO", 22, yPos + 6)
+    doc.setTextColor(0, 0, 0)
+    yPos += 12
 
     doc.setFontSize(10)
     doc.setFont("helvetica", "normal")
-    doc.text("Codigo de Processo Civil, Art. 784, X - Titulo executivo extrajudicial", 15, yPos)
-    yPos += 6
-    doc.text("Lei 8.078/90 (CDC) - Cobranca de divida condominial", 15, yPos)
-    yPos += 12
-
-    doc.setFontSize(14)
-    doc.setFont("helvetica", "bold")
-    doc.text("2. DADOS DO DEVEDOR", 15, yPos)
+    const legalTexts = [
+      "Código de Processo Civil (Lei 13.105/2015), Art. 784, X - Título executivo extrajudicial",
+      "Lei 8.078/90 (Código de Defesa do Consumidor) - Proteção ao crédito e cobrança",
+      "Lei 4.591/64 - Condomínios em edificações e rateio de despesas",
+      "Código Civil (Lei 10.406/2002), Art. 1.336, I - Obrigação do condômino",
+      "Lei 13.097/2015 - Responsabilidade civil e segurança jurídica nas transações"
+    ]
+    
+    legalTexts.forEach(text => {
+      currentPage = checkNewPage(6, currentPage)
+      doc.text(text, 20, yPos, { maxWidth: pageWidth - 35 })
+      yPos += 6
+    })
     yPos += 8
 
-    doc.setFontSize(10)
-    doc.setFont("helvetica", "normal")
-    doc.text(`Nome: ${debtor.name}`, 15, yPos)
-    yPos += 6
-    doc.text(`CPF: ${debtor.cpf}`, 15, yPos)
-    yPos += 6
-    doc.text(`Apartamento: ${debtor.apartment}`, 15, yPos)
-    yPos += 6
-    doc.text(`Telefone: ${debtor.phone || "Nao informado"}`, 15, yPos)
-    yPos += 6
-    doc.text(`Email: ${debtor.email || "Nao informado"}`, 15, yPos)
-    yPos += 12
-
-    doc.setFontSize(14)
+    // Section 2: Debtor Data
+    currentPage = checkNewPage(60, currentPage)
+    
+    doc.setFillColor(94, 27, 104)
+    doc.rect(15, yPos, 5, 8, 'F')
+    doc.setFontSize(13)
     doc.setFont("helvetica", "bold")
-    doc.text("3. DADOS FINANCEIROS", 15, yPos)
-    yPos += 8
+    doc.setTextColor(94, 27, 104)
+    doc.text("II. QUALIFICAÇÃO DO DEVEDOR", 22, yPos + 6)
+    doc.setTextColor(0, 0, 0)
+    yPos += 14
 
+    // Debtor info box
+    doc.setFillColor(250, 250, 250)
+    doc.setDrawColor(200, 200, 200)
+    doc.roundedRect(15, yPos, pageWidth - 30, 45, 2, 2, 'FD')
+    
+    yPos += 8
     doc.setFontSize(10)
+    doc.setFont("helvetica", "bold")
+    doc.text("Nome Completo:", 20, yPos)
     doc.setFont("helvetica", "normal")
-    doc.text(`Valor em Aberto: R$ ${totalOwed.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 15, yPos)
-    yPos += 6
-    doc.text(`Parcelas em Atraso: ${overdueInstallments.length}`, 15, yPos)
-    yPos += 12
+    doc.text(debtor.name, 55, yPos)
+    yPos += 7
+    
+    doc.setFont("helvetica", "bold")
+    doc.text("CPF:", 20, yPos)
+    doc.setFont("helvetica", "normal")
+    doc.text(debtor.cpf, 55, yPos)
+    yPos += 7
+    
+    doc.setFont("helvetica", "bold")
+    doc.text("Unidade:", 20, yPos)
+    doc.setFont("helvetica", "normal")
+    doc.text(debtor.apartment, 55, yPos)
+    yPos += 7
+    
+    doc.setFont("helvetica", "bold")
+    doc.text("Telefone:", 20, yPos)
+    doc.setFont("helvetica", "normal")
+    doc.text(debtor.phone || "Não informado", 55, yPos)
+    yPos += 7
+    
+    doc.setFont("helvetica", "bold")
+    doc.text("E-mail:", 20, yPos)
+    doc.setFont("helvetica", "normal")
+    doc.text(debtor.email || "Não informado", 55, yPos)
+    yPos += 7
+    
+    doc.setFont("helvetica", "bold")
+    doc.text("Perfil:", 20, yPos)
+    doc.setFont("helvetica", "normal")
+    const profileText = debtor.profile === "good_payer" ? "Bom Pagador" : debtor.profile === "bad_payer" ? "Mau Pagador" : "Novo Cliente"
+    doc.text(profileText, 55, yPos)
+    yPos += 15
+
+    // Section 3: Financial Data
+    currentPage = checkNewPage(50, currentPage)
+    
+    doc.setFillColor(94, 27, 104)
+    doc.rect(15, yPos, 5, 8, 'F')
+    doc.setFontSize(13)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(94, 27, 104)
+    doc.text("III. RESUMO FINANCEIRO DA DÍVIDA", 22, yPos + 6)
+    doc.setTextColor(0, 0, 0)
+    yPos += 14
+
+    // Financial summary box with highlight
+    doc.setFillColor(255, 240, 240)
+    doc.setDrawColor(220, 53, 69)
+    doc.setLineWidth(0.5)
+    doc.roundedRect(15, yPos, pageWidth - 30, 25, 2, 2, 'FD')
+    
+    yPos += 8
+    doc.setFontSize(11)
+    doc.setFont("helvetica", "bold")
+    doc.text("Valor Total em Atraso:", 20, yPos)
+    doc.setFontSize(16)
+    doc.setTextColor(220, 53, 69)
+    doc.text(`R$ ${totalOwed.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, pageWidth - 20, yPos, { align: "right" })
+    doc.setTextColor(0, 0, 0)
+    yPos += 9
+    
+    doc.setFontSize(11)
+    doc.setFont("helvetica", "bold")
+    doc.text("Parcelas em Atraso:", 20, yPos)
+    doc.setFontSize(14)
+    doc.text(`${overdueInstallments.length} parcela(s)`, pageWidth - 20, yPos, { align: "right" })
+    doc.setLineWidth(0.2)
+    yPos += 15
 
     if (investigationData) {
-      doc.setFontSize(14)
+      // Section 4: Judicial Processes
+      currentPage = checkNewPage(50, currentPage)
+      
+      doc.setFillColor(94, 27, 104)
+      doc.rect(15, yPos, 5, 8, 'F')
+      doc.setFontSize(13)
       doc.setFont("helvetica", "bold")
-      doc.text("4. PROCESSOS JUDICIAIS (TRATUM)", 15, yPos)
+      doc.setTextColor(94, 27, 104)
+      doc.text("IV. PROCESSOS JUDICIAIS IDENTIFICADOS", 22, yPos + 6)
+      doc.setTextColor(0, 0, 0)
+      yPos += 12
+      
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "italic")
+      doc.setTextColor(100, 100, 100)
+      doc.text("Fonte: Tratum - Consulta aos Tribunais de Justiça", 20, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos += 10
+
+      investigationData.judicialProcesses.forEach((process, index) => {
+        currentPage = checkNewPage(30, currentPage)
+        
+        // Process box
+        doc.setFillColor(255, 250, 245)
+        doc.setDrawColor(255, 140, 0)
+        doc.setLineWidth(0.3)
+        doc.roundedRect(15, yPos, pageWidth - 30, 22, 2, 2, 'FD')
+        
+        yPos += 6
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text(`${index + 1}. ${process.type}`, 20, yPos)
+        yPos += 6
+        
+        doc.setFontSize(9)
+        doc.setFont("helvetica", "normal")
+        doc.text(`Tribunal/Vara: ${process.court}`, 23, yPos)
+        yPos += 5
+        
+        doc.text(`Valor da Causa: R$ ${process.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 23, yPos)
+        doc.text(`Status: ${process.status}`, pageWidth - 20, yPos, { align: "right" })
+        yPos += 8
+      })
+      yPos += 5
+
+      // Section 5: Protests and Restrictions
+      currentPage = checkNewPage(50, currentPage)
+      
+      doc.setFillColor(94, 27, 104)
+      doc.rect(15, yPos, 5, 8, 'F')
+      doc.setFontSize(13)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(94, 27, 104)
+      doc.text("V. PROTESTOS E RESTRIÇÕES CREDITÍCIAS", 22, yPos + 6)
+      doc.setTextColor(0, 0, 0)
+      yPos += 12
+      
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "italic")
+      doc.setTextColor(100, 100, 100)
+      doc.text("Fonte: Tratum - Consulta aos Cartórios de Protesto", 20, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos += 10
+
+      investigationData.protests.forEach((protest, index) => {
+        currentPage = checkNewPage(25, currentPage)
+        
+        doc.setFillColor(255, 245, 245)
+        doc.setDrawColor(220, 53, 69)
+        doc.setLineWidth(0.3)
+        doc.roundedRect(15, yPos, pageWidth - 30, 18, 2, 2, 'FD')
+        
+        yPos += 6
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text(`Protesto ${index + 1}`, 20, yPos)
+        doc.setFont("helvetica", "normal")
+        doc.text(`Data: ${new Date(protest.date).toLocaleDateString("pt-BR")}`, pageWidth - 20, yPos, { align: "right" })
+        yPos += 6
+        
+        doc.setFontSize(9)
+        doc.text(`Credor: ${protest.creditor}`, 23, yPos)
+        yPos += 5
+        
+        doc.setFont("helvetica", "bold")
+        doc.text(`Valor: R$ ${protest.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 23, yPos)
+        yPos += 9
+      })
+      yPos += 5
+
+      // Section 6: Asset Investigation
+      currentPage = checkNewPage(50, currentPage)
+      
+      doc.setFillColor(94, 27, 104)
+      doc.rect(15, yPos, 5, 8, 'F')
+      doc.setFontSize(13)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(94, 27, 104)
+      doc.text("VI. INVESTIGAÇÃO PATRIMONIAL", 22, yPos + 6)
+      doc.setTextColor(0, 0, 0)
+      yPos += 12
+      
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "italic")
+      doc.setTextColor(100, 100, 100)
+      doc.text("Fonte: Tratum - Consulta integrada aos órgãos públicos e privados", 20, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos += 12
+
+      // 6.1 Corporate Structure
+      doc.setFontSize(11)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(94, 27, 104)
+      doc.text("6.1. Quadro Societário (Receita Federal)", 20, yPos)
+      doc.setTextColor(0, 0, 0)
       yPos += 8
 
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      investigationData.judicialProcesses.forEach((process) => {
-        doc.text(`- ${process.type} | ${process.court}`, 20, yPos)
+      investigationData.companies.forEach((company, index) => {
+        currentPage = checkNewPage(25, currentPage)
+        
+        doc.setFillColor(245, 250, 255)
+        doc.setDrawColor(70, 130, 180)
+        doc.setLineWidth(0.3)
+        doc.roundedRect(20, yPos, pageWidth - 40, 18, 2, 2, 'FD')
+        
+        yPos += 6
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text(`${index + 1}. ${company.name}`, 25, yPos)
         yPos += 5
-        doc.text(`  Valor: R$ ${process.value.toLocaleString("pt-BR")} | Status: ${process.status}`, 20, yPos)
-        yPos += 5
+        
+        doc.setFontSize(9)
+        doc.setFont("helvetica", "normal")
+        doc.text(`CNPJ: ${company.cnpj}`, 28, yPos)
+        doc.setFont("helvetica", "bold")
+        doc.text(`Participação: ${company.ownership}%`, pageWidth - 25, yPos, { align: "right" })
+        yPos += 9
       })
-      yPos += 5
-
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.text("5. PROTESTOS E RESTRICOES", 15, yPos)
       yPos += 8
 
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      investigationData.protests.forEach((protest) => {
-        doc.text(
-          `- Data: ${new Date(protest.date).toLocaleDateString("pt-BR")} | R$ ${protest.value.toLocaleString("pt-BR")}`,
-          20,
-          yPos,
-        )
-        yPos += 5
-        doc.text(`  Credor: ${protest.creditor}`, 20, yPos)
-        yPos += 5
-      })
-      yPos += 5
-
-      if (yPos > 240) {
-        doc.addPage()
-        yPos = 20
-      }
-
-      doc.setFontSize(14)
+      // 6.2 Real Estate
+      currentPage = checkNewPage(50, currentPage)
+      
+      doc.setFontSize(11)
       doc.setFont("helvetica", "bold")
-      doc.text("6. INVESTIGACAO PATRIMONIAL", 15, yPos)
+      doc.setTextColor(94, 27, 104)
+      doc.text("6.2. Bens Imóveis (Cartórios de Registro)", 20, yPos)
+      doc.setTextColor(0, 0, 0)
       yPos += 8
 
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "bold")
-      doc.text("6.1 Quadro Societario (Tratum):", 15, yPos)
-      yPos += 6
-
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      investigationData.companies.forEach((company) => {
-        doc.text(`- ${company.name} (${company.cnpj}) - ${company.ownership}% de participacao`, 20, yPos)
+      investigationData.realEstate.forEach((property, index) => {
+        currentPage = checkNewPage(28, currentPage)
+        
+        doc.setFillColor(245, 255, 245)
+        doc.setDrawColor(34, 139, 34)
+        doc.setLineWidth(0.3)
+        doc.roundedRect(20, yPos, pageWidth - 40, 20, 2, 2, 'FD')
+        
+        yPos += 6
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text(`Imóvel ${index + 1}`, 25, yPos)
         yPos += 5
+        
+        doc.setFontSize(9)
+        doc.setFont("helvetica", "normal")
+        doc.text(`Endereço: ${property.address}`, 28, yPos, { maxWidth: pageWidth - 60 })
+        yPos += 5
+        
+        doc.setFont("helvetica", "bold")
+        doc.text(`Valor Estimado: R$ ${property.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, 28, yPos)
+        yPos += 10
       })
-      yPos += 5
+      yPos += 8
 
-      doc.setFontSize(12)
+      // 6.3 Vehicles
+      currentPage = checkNewPage(50, currentPage)
+      
+      doc.setFontSize(11)
       doc.setFont("helvetica", "bold")
-      doc.text("6.2 Imoveis (Cartorio):", 15, yPos)
-      yPos += 6
+      doc.setTextColor(94, 27, 104)
+      doc.text("6.3. Veículos (DETRAN)", 20, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos += 8
 
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      investigationData.realEstate.forEach((property) => {
-        doc.text(`- ${property.address}`, 20, yPos)
+      investigationData.vehicles.forEach((vehicle, index) => {
+        currentPage = checkNewPage(25, currentPage)
+        
+        doc.setFillColor(255, 250, 240)
+        doc.setDrawColor(255, 165, 0)
+        doc.setLineWidth(0.3)
+        doc.roundedRect(20, yPos, pageWidth - 40, 18, 2, 2, 'FD')
+        
+        yPos += 6
+        doc.setFontSize(10)
+        doc.setFont("helvetica", "bold")
+        doc.text(`Veículo ${index + 1}: ${vehicle.brand} ${vehicle.model}`, 25, yPos)
         yPos += 5
-        doc.text(`  Valor estimado: R$ ${property.value.toLocaleString("pt-BR")}`, 20, yPos)
-        yPos += 5
-      })
-      yPos += 5
-
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "bold")
-      doc.text("6.3 Veiculos (DETRAN):", 15, yPos)
-      yPos += 6
-
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      investigationData.vehicles.forEach((vehicle) => {
-        doc.text(`- ${vehicle.brand} ${vehicle.model} (${vehicle.year})`, 20, yPos)
-        yPos += 5
-        doc.text(`  Valor FIPE: R$ ${vehicle.value.toLocaleString("pt-BR")}`, 20, yPos)
-        yPos += 5
+        
+        doc.setFontSize(9)
+        doc.setFont("helvetica", "normal")
+        doc.text(`Ano: ${vehicle.year}`, 28, yPos)
+        doc.setFont("helvetica", "bold")
+        doc.text(`Valor FIPE: R$ ${vehicle.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, pageWidth - 25, yPos, { align: "right" })
+        yPos += 9
       })
       yPos += 10
 
+      // Alert for Asset Mixing
       if (investigationData.hasConfusaoPatrimonial) {
+        currentPage = checkNewPage(40, currentPage)
+        
+        // Alert box
+        doc.setFillColor(255, 240, 240)
+        doc.setDrawColor(220, 53, 69)
+        doc.setLineWidth(0.8)
+        doc.roundedRect(15, yPos, pageWidth - 30, 35, 2, 2, 'FD')
+        
+        yPos += 8
         doc.setFontSize(12)
         doc.setFont("helvetica", "bold")
-        doc.setTextColor(255, 0, 0)
-        doc.text("ALERTA: CONFUSAO PATRIMONIAL DETECTADA", 15, yPos)
-        yPos += 6
+        doc.setTextColor(220, 53, 69)
+        doc.text("ALERTA JURÍDICO: CONFUSÃO PATRIMONIAL DETECTADA", 20, yPos)
         doc.setTextColor(0, 0, 0)
-        doc.setFont("helvetica", "normal")
+        yPos += 8
+        
         doc.setFontSize(10)
-        doc.text("Detectada mistura de patrimonios pessoal e empresarial.", 15, yPos)
+        doc.setFont("helvetica", "normal")
+        doc.text("Identificada mistura de patrimônios pessoal e empresarial, caracterizando", 23, yPos)
         yPos += 5
-        doc.text("Recomenda-se desconsideracao da personalidade juridica.", 15, yPos)
-        yPos += 10
+        doc.text("possível desvio de finalidade das pessoas jurídicas relacionadas.", 23, yPos)
+        yPos += 1
+        
+        doc.setFont("helvetica", "normal")
+        yPos += 5
+        doc.text("Considerar pedido de desconsideração da personalidade jurídica (Art. 50 do", 23, yPos)
+        yPos += 5
+        doc.text("Código Civil) para responsabilização patrimonial do devedor.", 23, yPos)
+        yPos += 15
       }
 
-      doc.setFontSize(14)
+      // Section 7: Risk Analysis
+      currentPage = checkNewPage(80, currentPage)
+      
+      doc.setFillColor(94, 27, 104)
+      doc.rect(15, yPos, 5, 8, 'F')
+      doc.setFontSize(13)
       doc.setFont("helvetica", "bold")
-      doc.text("7. ANALISE DE RISCO (TRATUM)", 15, yPos)
+      doc.setTextColor(94, 27, 104)
+      doc.text("VII. ANÁLISE DE RISCO E CAPACIDADE DE PAGAMENTO", 22, yPos + 6)
+      doc.setTextColor(0, 0, 0)
+      yPos += 12
+      
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "italic")
+      doc.setTextColor(100, 100, 100)
+      doc.text("Fonte: Tratum - Score proprietário baseado em algoritmo de aprendizado de máquina", 20, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos += 12
+
+      // Risk Score Box
+      doc.setFillColor(255, 250, 245)
+      doc.setDrawColor(255, 140, 0)
+      doc.setLineWidth(0.5)
+      doc.roundedRect(20, yPos, (pageWidth - 50) / 3, 25, 2, 2, 'FD')
+      
+      yPos += 7
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "normal")
+      doc.text("Score de Risco", 25, yPos)
+      yPos += 6
+      doc.setFontSize(18)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(255, 140, 0)
+      doc.text(`${investigationData.riskScore}`, 25, yPos)
+      doc.setFontSize(10)
+      doc.text("/100", 40, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos -= 13
+
+      // Total Debts Box
+      const boxWidth = (pageWidth - 50) / 3
+      doc.setFillColor(255, 245, 245)
+      doc.setDrawColor(220, 53, 69)
+      doc.setLineWidth(0.5)
+      doc.roundedRect(25 + boxWidth, yPos, boxWidth, 25, 2, 2, 'FD')
+      
+      yPos += 7
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "normal")
+      doc.text("Dívidas Identificadas", 30 + boxWidth, yPos)
+      yPos += 6
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(220, 53, 69)
+      doc.text(`R$ ${investigationData.totalDebts.toLocaleString("pt-BR")}`, 30 + boxWidth, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos -= 13
+
+      // Total Wealth Box
+      doc.setFillColor(245, 255, 245)
+      doc.setDrawColor(34, 139, 34)
+      doc.setLineWidth(0.5)
+      doc.roundedRect(30 + 2 * boxWidth, yPos, boxWidth, 25, 2, 2, 'FD')
+      
+      yPos += 7
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "normal")
+      doc.text("Patrimônio Rastreado", 35 + 2 * boxWidth, yPos)
+      yPos += 6
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(34, 139, 34)
+      doc.text(`R$ ${investigationData.totalWealth.toLocaleString("pt-BR")}`, 35 + 2 * boxWidth, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos += 20
+
+      // Payment Capacity
+      const capacityPercentage = ((investigationData.totalWealth / investigationData.totalDebts) * 100).toFixed(0)
+      doc.setFillColor(240, 248, 255)
+      doc.setDrawColor(70, 130, 180)
+      doc.setLineWidth(0.5)
+      doc.roundedRect(20, yPos, pageWidth - 40, 25, 2, 2, 'FD')
+      
       yPos += 8
+      doc.setFontSize(11)
+      doc.setFont("helvetica", "bold")
+      doc.text("Capacidade de Pagamento (Patrimônio/Dívidas):", 25, yPos)
+      yPos += 7
+      doc.setFontSize(20)
+      doc.setTextColor(70, 130, 180)
+      doc.text(`${capacityPercentage}%`, pageWidth / 2, yPos, { align: "center" })
+      doc.setTextColor(0, 0, 0)
+      yPos += 8
+      
+      doc.setFontSize(8)
+      doc.setFont("helvetica", "italic")
+      doc.setTextColor(100, 100, 100)
+      doc.text("Patrimônio rastreável e potencialmente penhorável conforme CPC Art. 835", 25, yPos)
+      doc.setTextColor(0, 0, 0)
+      yPos += 15
+
+      // Conclusion section
+      currentPage = checkNewPage(40, currentPage)
+      
+      doc.setFillColor(94, 27, 104)
+      doc.rect(15, yPos, 5, 8, 'F')
+      doc.setFontSize(13)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(94, 27, 104)
+      doc.text("VIII. CONCLUSÃO E RECOMENDAÇÕES", 22, yPos + 6)
+      doc.setTextColor(0, 0, 0)
+      yPos += 14
 
       doc.setFontSize(10)
       doc.setFont("helvetica", "normal")
-      doc.text(`Score de Risco: ${investigationData.riskScore}/100`, 15, yPos)
-      yPos += 6
-      doc.text(`Total de Dividas Identificadas: R$ ${investigationData.totalDebts.toLocaleString("pt-BR")}`, 15, yPos)
-      yPos += 6
-      doc.text(`Patrimonio Estimado Total: R$ ${investigationData.totalWealth.toLocaleString("pt-BR")}`, 15, yPos)
-      yPos += 6
-      doc.setFont("helvetica", "bold")
-      doc.text(
-        `Capacidade de Pagamento: ${((investigationData.totalWealth / investigationData.totalDebts) * 100).toFixed(0)}%`,
-        15,
-        yPos,
-      )
-      yPos += 10
+      const conclusionText = [
+        "Com base na investigação realizada através da plataforma Tratum e nas informações",
+        "consolidadas neste dossiê, conclui-se que:",
+        "",
+        "1. O devedor possui capacidade patrimonial comprovada para honrar a dívida em questão;",
+        "2. Foram identificados bens móveis e imóveis passíveis de penhora conforme legislação vigente;",
+        "3. Existem processos judiciais e protestos que caracterizam inadimplência reiterada;",
+        "4. Recomenda-se prosseguimento com as medidas judiciais cabíveis para recuperação do crédito.",
+        "",
+        "Este documento serve como instrumento de apoio à tomada de decisão quanto ao",
+        "prosseguimento de ações de cobrança judicial ou extrajudicial."
+      ]
+
+      conclusionText.forEach(line => {
+        currentPage = checkNewPage(6, currentPage)
+        doc.text(line, 20, yPos, { maxWidth: pageWidth - 40 })
+        yPos += 5
+      })
     }
 
-    doc.setFontSize(8)
-    doc.setFont("helvetica", "italic")
-    doc.text("Documento gerado pelo CollectAI com dados da Tratum", pageWidth / 2, 280, { align: "center" })
+    // Add final footer
+    addFooter(currentPage)
 
-    const fileName = `dossier_${debtor.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`
+    const fileName = `Dossie_Legal_${debtor.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`
     doc.save(fileName)
 
     setIsGeneratingPdf(false)
-    toast.success("Dossiê gerado! Verifique seus downloads.")
+    toast.success("Dossiê legal gerado com sucesso!")
   }
 
   const getStepIcon = (status: InvestigationStep["status"]) => {
@@ -637,11 +1032,18 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => toast.info("Chat feature coming soon!")}>
+                <Button 
+                  className="flex-1 min-w-[180px]" 
+                  onClick={() => router(`/chat/${debtor.id}`)}
+                >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Iniciar Conversa
                 </Button>
-                <Button variant="outline" onClick={() => toast.info("Knowledge base coming soon!")}>
+                <Button 
+                  variant="outline" 
+                  className="flex-1 min-w-[180px]" 
+                  onClick={() => router("/knowledge")}
+                >
                   <Brain className="w-4 h-4 mr-2" />
                   Base de Conhecimento
                 </Button>
