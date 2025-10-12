@@ -43,25 +43,41 @@ interface WorkflowCohort {
 const convertNodesToTimelineEvents = (nodes: any[]): TimelineEvent[] => {
   if (!nodes || !Array.isArray(nodes)) return [];
 
-  // Filter only notification nodes that have dayOffset
+  // Filter notification nodes that have dayOffset plus any final/terminal nodes
   const timelineNodes = nodes.filter(node => 
-    (node.type === 'sendNotification' || node.type === 'notifyOperator') &&
-    node.data?.dayOffset !== undefined
+    ((node.type === 'sendNotification' || node.type === 'notifyOperator') && node.data?.dayOffset !== undefined) ||
+    // Include terminal nodes like judicialEscalation, success or noPayment
+    node.type === 'judicialEscalation' || node.type === 'success' || node.type === 'noPayment'
   );
 
   // Convert to TimelineEvent format
-  const events: TimelineEvent[] = timelineNodes.map(node => ({
-    dayOffset: node.data.dayOffset,
-    label: node.data.label || 'Evento sem título',
-    channels: {
-      email: node.data.sendEmail || false,
-      whatsapp: node.data.sendWhatsApp || false,
-      sms: node.data.sendSMS || false,
-      link: node.data.includePaymentLink || false,
-    },
-    timeOfDay: node.data.timeOfDay || '09:00',
-    nodeType: node.type,
-  }));
+  const events: TimelineEvent[] = timelineNodes.map(node => {
+    // For terminal nodes without a dayOffset, use the largest existing dayOffset + 1
+    // to place them right after the previous node in the timeline
+    const isTerminalNode = ['judicialEscalation', 'success', 'noPayment'].includes(node.type);
+    let dayOffset = node.data.dayOffset;
+    
+    if (isTerminalNode && dayOffset === undefined) {
+      // Find max dayOffset from notification nodes and add 1
+      const maxOffset = nodes
+        .filter(n => n.data?.dayOffset !== undefined)
+        .reduce((max, n) => Math.max(max, n.data.dayOffset), 0);
+      dayOffset = maxOffset + 1;
+    }
+    
+    return {
+      dayOffset,
+      label: node.data.label || 'Evento sem título',
+      channels: {
+        email: node.data.sendEmail || false,
+        whatsapp: node.data.sendWhatsApp || false,
+        sms: node.data.sendSMS || false,
+        link: node.data.includePaymentLink || false,
+      },
+      timeOfDay: node.data.timeOfDay || '09:00',
+      nodeType: node.type,
+    };
+  });
 
   // Sort by dayOffset (chronological order)
   return events.sort((a, b) => a.dayOffset - b.dayOffset);
