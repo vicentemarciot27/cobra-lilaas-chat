@@ -1,5 +1,16 @@
 import React from 'react';
-import { Mail, MessageCircle, Phone, Link2, Bell, UserX, Clock, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  IconMail,
+  IconMessageCircle,
+  IconPhone,
+  IconLink,
+  IconBell,
+  IconUserX,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconAlertCircle,
+  IconClock
+} from '@tabler/icons-react';
 import { AgentConfig } from '@/contexts/DataContext';
 
 interface TimelineEvent {
@@ -18,7 +29,6 @@ interface TimelineEvent {
 interface WorkflowCohort {
   id: string;
   name: string;
-  emoji: string;
   description: string;
   activeCount: number;
   color: string;
@@ -124,19 +134,22 @@ const EnhancedTimelineVisualization: React.FC<TimelineVisualizationProps> = ({ w
 
   // Get main icon based on node type
   const getMainIcon = (nodeType?: string, iconClass?: string) => {
+    const size = 16;
+    const stroke = 1.5;
+    
     switch (nodeType) {
       case 'sendNotification':
-        return <Bell className={`w-4 h-4 ${iconClass}`} />;
+        return <IconBell size={size} stroke={stroke} className={iconClass} />;
       case 'notifyOperator':
-        return <UserX className={`w-4 h-4 ${iconClass}`} />;
+        return <IconUserX size={size} stroke={stroke} className={iconClass} />;
       case 'judicialEscalation':
-        return <AlertTriangle className={`w-4 h-4 ${iconClass}`} />;
+        return <IconAlertTriangle size={size} stroke={stroke} className={iconClass} />;
       case 'noPayment':
-        return <AlertCircle className={`w-4 h-4 ${iconClass}`} />;
+        return <IconAlertCircle size={size} stroke={stroke} className={iconClass} />;
       case 'success':
-        return <CheckCircle className={`w-4 h-4 ${iconClass}`} />;
+        return <IconCircleCheck size={size} stroke={stroke} className={iconClass} />;
       default:
-        return <Bell className={`w-4 h-4 ${iconClass}`} />;
+        return <IconBell size={size} stroke={stroke} className={iconClass} />;
     }
   };
 
@@ -154,13 +167,11 @@ const EnhancedTimelineVisualization: React.FC<TimelineVisualizationProps> = ({ w
               {allDays.map((day, idx) => {
                 const event = workflow.events.find(e => e.dayOffset === day);
                 const colors = getNodeColor(day, event?.nodeType);
-                const isFirstNode = idx === 0;
-                const isLastNode = idx === allDays.length - 1;
                 
                 return (
                   <div key={day} className="flex flex-col items-center flex-1 w-full">
                     {/* Day label above timeline */}
-                    <div className="text-xs font-semibold text-muted-foreground mb-2" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
+                    <div className="text-xs font-semibold text-muted-foreground mb-2 bg-transparent" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
                       {day === 0 ? 'D (Vencimento)' : day < 0 ? `D${day}` : `D+${day}`}
                     </div>
 
@@ -175,7 +186,7 @@ const EnhancedTimelineVisualization: React.FC<TimelineVisualizationProps> = ({ w
                       <div className={`p-2.5 rounded-lg border ${colors.bg} ${colors.border} w-full h-full flex flex-col justify-between`}>
                         {/* Keyword label */}
                         <div className="flex justify-center mb-1.5">
-                          <span className="text-[10px] font-semibold bg-background/50 rounded px-1.5 py-0.5">
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5">
                             {getNodeKeyword(event.nodeType)}
                           </span>
                         </div>
@@ -192,22 +203,22 @@ const EnhancedTimelineVisualization: React.FC<TimelineVisualizationProps> = ({ w
                         <div className="flex gap-1 justify-center items-center mt-auto">
                           {event.channels.email && (
                             <div className="flex items-center justify-center">
-                              <Mail className={`w-3.5 h-3.5 ${colors.icon}`} />
+                              <IconMail size={14} stroke={1.5} className={colors.icon} />
                             </div>
                           )}
                           {event.channels.whatsapp && (
                             <div className="flex items-center justify-center">
-                              <MessageCircle className={`w-3.5 h-3.5 ${colors.icon}`} />
+                              <IconMessageCircle size={14} stroke={1.5} className={colors.icon} />
                             </div>
                           )}
                           {event.channels.sms && (
                             <div className="flex items-center justify-center">
-                              <Phone className={`w-3.5 h-3.5 ${colors.icon}`} />
+                              <IconPhone size={14} stroke={1.5} className={colors.icon} />
                             </div>
                           )}
                           {event.channels.link && (
                             <div className="flex items-center justify-center">
-                              <Link2 className={`w-3.5 h-3.5 ${colors.icon}`} />
+                              <IconLink size={14} stroke={1.5} className={colors.icon} />
                             </div>
                           )}
                         </div>

@@ -1,5 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { Settings, Bot, Zap, Volume2 } from "lucide-react";
+import {
+  IconSettings,
+  IconRobot,
+  IconBolt,
+  IconVolume
+} from "@tabler/icons-react";
 import EnhancedTimelineVisualization from "@/components/workflow/EnhancedTimelineVisualization";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { useData, AgentConfig } from "@/contexts/DataContext";
-import { getProfileEmoji, getProfileDescription } from "@/data/defaults";
+import { getProfileDescription } from "@/data/defaults";
 import { AgentSettingsDetail } from "@/components/workflow/AgentSettingsDetail";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 interface TimelineEvent {
   dayOffset: number;
   label: string;
@@ -28,7 +35,6 @@ interface WorkflowCohort {
   id: string;
   rulerId: string;
   name: string;
-  emoji: string;
   description: string;
   activeCount: number;
   color: string;
@@ -127,17 +133,6 @@ const AgentConfigCard = ({
     onConfigChange(rulerId, newConfig);
   };
 
-  const getToneBadgeColor = (tone: string) => {
-    switch(tone) {
-      case 'friendly': return 'bg-green-100 text-green-800';
-      case 'neutral': return 'bg-blue-100 text-blue-800';
-      case 'formal': return 'bg-purple-100 text-purple-800';
-      case 'firm': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-
   // Generate unique IDs for this specific card
   const toneId = `tone-${cohortId}`;
   const adaptiveTimingId = `adaptive-timing-${cohortId}`;
@@ -146,8 +141,8 @@ const AgentConfigCard = ({
   return (
     <Card className="p-5 border shadow-sm bg-white">
       <div className="flex items-center gap-3 mb-4 pb-2 border-b">
-        <div className="w-8 rounded-full flex items-center justify-center">
-          <Bot className="w-5 text-primary" />
+        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-muted">
+          <IconRobot size={18} stroke={1.5} className="text-primary" />
         </div>
         <div className="flex items-start justify-between w-full">
           <div>
@@ -158,7 +153,7 @@ const AgentConfigCard = ({
             e.stopPropagation();
             setShowSettings(true);
           }}>
-            <Settings className="w-4 h-4 text-muted-foreground" />
+            <IconSettings size={16} stroke={1.5} className="text-muted-foreground" />
           </Button>
         </div>
       </div>
@@ -167,7 +162,7 @@ const AgentConfigCard = ({
         {/* Tone Selection */}
         <div className="space-y-2">
           <Label htmlFor={toneId} className="text-xs flex items-center gap-2">
-            <Volume2 className="w-3.5 h-3.5" />
+            <IconVolume size={16} stroke={1.5} className="text-muted-foreground" />
             Tom de Comunicação
           </Label>
           <Select value={localConfig.tone} onValueChange={(value: any) => handleConfigChange('tone', value)}>
@@ -187,7 +182,7 @@ const AgentConfigCard = ({
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-muted-foreground" />
+              <IconBolt size={16} stroke={1.5} className="text-muted-foreground" />
               <Label htmlFor={adaptiveTimingId} className="text-xs cursor-pointer">
                 Timing adaptativo
               </Label>
@@ -201,7 +196,7 @@ const AgentConfigCard = ({
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-muted-foreground" />
+              <IconBolt size={16} stroke={1.5} className="text-muted-foreground" />
               <Label htmlFor={negotiationId} className="text-xs cursor-pointer">
                 Negociação habilitada
               </Label>
@@ -211,7 +206,7 @@ const AgentConfigCard = ({
               checked={localConfig.negotiationEnabled}
               onCheckedChange={(checked) => handleConfigChange('negotiationEnabled', checked)}
             />
-        </div>
+          </div>
       </div>
       <AgentSettingsDetail 
         open={showSettings} 
@@ -242,6 +237,17 @@ export default function WorkflowsView() {
     // This ensures changes are persisted and synchronized across the app
     updateRuler(rulerId, { agent_config: newConfig });
   };
+  
+  // Generate initials based on profile type
+  const getProfileInitials = (profile: string) => {
+    // Use the two letter profile code
+    switch(profile) {
+      case 'good_payer': return 'BP'; // Bom Pagador
+      case 'bad_payer': return 'MP';  // Mau Pagador
+      case 'new': return 'ND';        // Novo Devedor
+      default: return 'RD';           // Régua Default
+    }
+  };
 
   // Build workflows from rulers
   const workflows = useMemo<WorkflowCohort[]>(() => {
@@ -263,7 +269,6 @@ export default function WorkflowsView() {
         id: ruler.profile_target,
         rulerId: ruler.id,
         name: ruler.name,
-        emoji: getProfileEmoji(ruler.profile_target),
         description: getProfileDescription(ruler.profile_target),
         activeCount,
         color: workflowColor,
@@ -284,51 +289,55 @@ export default function WorkflowsView() {
       </div>
 
       {/* Main Content */}
-          {workflows.map((workflow) => (
-            <div key={workflow.id} className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
-              {/* Agent Config Card */}
-              <AgentConfigCard 
-                config={workflow.agentConfig} 
-                cohortName={workflow.name} 
-                cohortId={workflow.id}
-                rulerId={workflow.rulerId}
-                onConfigChange={handleAgentConfigChange}
-              />
+      {workflows.map((workflow) => (
+        <div key={workflow.id} className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
+          {/* Agent Config Card */}
+          <AgentConfigCard 
+            config={workflow.agentConfig} 
+            cohortName={workflow.name} 
+            cohortId={workflow.id}
+            rulerId={workflow.rulerId}
+            onConfigChange={handleAgentConfigChange}
+          />
 
-              {/* Timeline Card */}
-              <Card
-                className={`p-6 border shadow-sm ${workflow.color} flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow`}
-                onClick={() => navigate(`/canvas?ruler=${workflow.rulerId}`)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="text-4xl">{workflow.emoji}</div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{workflow.name}</h3>
-                      <p className="text-sm text-muted-foreground">{workflow.description}</p>
-                    </div>
-                    <div className="flex items-center ml-2 px-3 py-1 rounded-lg bg-muted border text-sm font-medium text-muted-foreground shadow-sm">
-                      <span className="font-semibold text-base text-primary">{workflow.activeCount}</span>
-                      <span className="ml-1">{workflow.activeCount === 1 ? "devedor" : "devedores"}</span>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent card click
-                      navigate(`/canvas?ruler=${workflow.rulerId}`);
-                    }}
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
+          {/* Timeline Card */}
+          <Card
+            className={`p-4 border shadow-sm ${workflow.color} flex flex-col justify-center cursor-pointer hover:shadow-md transition-shadow`}
+            onClick={() => navigate(`/canvas?ruler=${workflow.rulerId}`)}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-4">
+                {/* Avatar com iniciais do perfil */}
+                <Avatar className="h-10 w-10 ring-1 ring-border">
+                  <AvatarFallback className="bg-muted text-foreground text-sm">
+                    {getProfileInitials(workflow.id)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold">{workflow.name}</h3>
+                  <p className="text-sm text-muted-foreground">{workflow.description}</p>
                 </div>
-
-                <TimelineVisualization workflow={workflow} />
-              </Card>
+                <div className="flex items-center ml-2 px-3 py-1 rounded-lg bg-muted border text-sm font-medium text-muted-foreground shadow-sm">
+                  <span className="font-semibold text-base text-primary">{workflow.activeCount}</span>
+                  <span className="ml-1">{workflow.activeCount === 1 ? "devedor" : "devedores"}</span>
+                </div>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent card click
+                  navigate(`/canvas?ruler=${workflow.rulerId}`);
+                }}
+              >
+                <IconSettings size={16} stroke={1.5} />
+              </Button>
             </div>
-          ))}
+
+            <TimelineVisualization workflow={workflow} />
+          </Card>
+        </div>
+      ))}
     </div>
   );
 }
-
