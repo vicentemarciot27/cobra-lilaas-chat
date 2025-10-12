@@ -14,6 +14,20 @@ export type InstallmentStatus = 'paid' | 'renegotiated' | 'overdue' | 'future';
 export type KnowledgeCategory = 'behavior' | 'communication' | 'financial' | 'payment';
 export type KnowledgeStatus = 'approved' | 'pending' | 'rejected';
 
+export interface NegotiationPolicy {
+  maxDiscount: number; // Percentage (0-100)
+  maxInstallments: number; // Maximum number of installments allowed
+  minInstallmentValue: number; // Minimum value per installment
+}
+
+export interface AgentConfig {
+  tone: 'friendly' | 'neutral' | 'formal' | 'firm';
+  toneDescription?: string; // Description of the communication tone
+  adaptiveTiming: boolean;
+  negotiationEnabled: boolean;
+  negotiationPolicy: NegotiationPolicy;
+}
+
 export interface Debtor {
   id: string;
   name: string;
@@ -82,7 +96,7 @@ export interface Ruler {
   name: string;
   profile_target: DebtorProfile;
   json_data: object;
-  agent_config: object;
+  agent_config: AgentConfig;
   is_active: boolean;
   created_at: string;
 }

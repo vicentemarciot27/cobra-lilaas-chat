@@ -1,5 +1,6 @@
 import React from 'react';
 import { Mail, MessageCircle, Phone, Link2, Bell, UserX, Clock } from 'lucide-react';
+import { AgentConfig } from '@/contexts/DataContext';
 
 interface TimelineEvent {
   dayOffset: number;
@@ -22,13 +23,7 @@ interface WorkflowCohort {
   activeCount: number;
   color: string;
   events: TimelineEvent[];
-  agentConfig: {
-    tone: 'friendly' | 'neutral' | 'formal' | 'firm';
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    autoEscalate: boolean;
-    adaptiveTiming: boolean;
-    negotiationEnabled: boolean;
-  };
+  agentConfig: AgentConfig;
 }
 
 interface TimelineVisualizationProps {
@@ -76,13 +71,13 @@ const EnhancedTimelineVisualization: React.FC<TimelineVisualizationProps> = ({ w
   };
 
   return (
-    <div className="relative">
+    <div className="relative py-4">
       {/* Timeline container */}
-      <div className="relative py-6">
-        {/* Colored timeline track */}
-        <div className="absolute top-12 left-0 right-0 h-2 rounded-full bg-gradient-to-r from-blue-400 via-amber-400 to-purple-500 shadow-inner"></div>
+      <div className="relative">
+        {/* Simple timeline track */}
+        <div className="absolute top-8 left-0 right-0 h-1 bg-border"></div>
 
-        <div className="relative flex justify-between">
+        <div className="relative flex justify-between gap-2">
           {allDays.map((day, idx) => {
             const event = workflow.events.find(e => e.dayOffset === day);
             const colors = getNodeColor(day);
@@ -90,52 +85,49 @@ const EnhancedTimelineVisualization: React.FC<TimelineVisualizationProps> = ({ w
             const isLastNode = idx === allDays.length - 1;
             
             return (
-              <div key={day} className="flex flex-col items-center flex-1 relative group">
+              <div key={day} className="flex flex-col items-center flex-1 min-w-0">
                 {/* Day label above timeline */}
-                <div className="text-xs font-bold font-mono mb-1">
+                <div className="text-xs font-semibold text-muted-foreground mb-2" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
                   {day === 0 ? 'D (Vencimento)' : day < 0 ? `D${day}` : `D+${day}`}
                 </div>
 
                 {/* Day marker dot on the timeline */}
-                <div className="relative mb-3">
-                  <div className={`w-4 h-4 rounded-full ${isFirstNode || isLastNode ? 'bg-primary shadow-glow' : 'bg-background border-2 border-foreground/20'} flex items-center justify-center transition-transform transform group-hover:scale-125 z-10`}>
-                    {event && <div className="w-2 h-2 rounded-full bg-primary"></div>}
+                <div className="relative mb-3 z-10">
+                  <div className={`w-3 h-3 rounded-full ${event ? 'bg-primary' : 'bg-muted border-2 border-border'} transition-all`}>
                   </div>
                 </div>
 
                 {/* Event card below timeline */}
                 {event && (
-                  <div className={`p-3 rounded-xl border-2 ${colors.bg} ${colors.border} shadow-card transition-all hover:shadow-hover transform group-hover:-translate-y-1 mt-3 min-w-[140px]`}>
+                  <div className={`p-2.5 rounded-lg border ${colors.bg} ${colors.border} w-full`}>
                     {/* Main icon and Time of day */}
                     {event.timeOfDay && (
-                      <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="flex items-center justify-center gap-1.5 mb-2">
                         {getMainIcon(event.nodeType, colors.icon)}
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-medium">{event.timeOfDay}</span>
-                        </div>
+                        <span className="text-xs font-medium text-foreground">{event.timeOfDay}</span>
                       </div>
                     )}
                     
                     {/* Channel icons inline */}
-                    <div className="flex gap-1 justify-center flex-wrap">
+                    <div className="flex gap-1 justify-center items-center">
                       {event.channels.email && (
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${colors.icon}`}>
-                          <Mail className="w-3.5 h-3.5" />
+                        <div className="flex items-center justify-center">
+                          <Mail className={`w-3.5 h-3.5 ${colors.icon}`} />
                         </div>
                       )}
                       {event.channels.whatsapp && (
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${colors.icon}`}>
-                          <MessageCircle className="w-3.5 h-3.5" />
+                        <div className="flex items-center justify-center">
+                          <MessageCircle className={`w-3.5 h-3.5 ${colors.icon}`} />
                         </div>
                       )}
                       {event.channels.sms && (
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${colors.icon}`}>
-                          <Phone className="w-3.5 h-3.5" />
+                        <div className="flex items-center justify-center">
+                          <Phone className={`w-3.5 h-3.5 ${colors.icon}`} />
                         </div>
                       )}
                       {event.channels.link && (
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${colors.icon}`}>
-                          <Link2 className="w-3.5 h-3.5" />
+                        <div className="flex items-center justify-center">
+                          <Link2 className={`w-3.5 h-3.5 ${colors.icon}`} />
                         </div>
                       )}
                     </div>

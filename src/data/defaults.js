@@ -599,10 +599,14 @@ export const initialRulers = [
     },
     agent_config: { 
       tone: 'friendly',
-      priority: 'medium',
-      autoEscalate: false,
+      toneDescription: 'Comunicação leve e próxima, usando linguagem acessível e empática. Ideal para construir relacionamento.',
       adaptiveTiming: true,
       negotiationEnabled: true,
+      negotiationPolicy: {
+        maxDiscount: 15,
+        maxInstallments: 6,
+        minInstallmentValue: 200,
+      },
     },
     is_active: true,
     created_at: '2025-10-01T10:00:00Z'
@@ -619,10 +623,14 @@ export const initialRulers = [
     },
     agent_config: { 
       tone: 'firm',
-      priority: 'urgent',
-      autoEscalate: true,
+      toneDescription: 'Comunicação direta e assertiva, enfatizando consequências e urgência de forma profissional.',
       adaptiveTiming: false,
       negotiationEnabled: false,
+      negotiationPolicy: {
+        maxDiscount: 5,
+        maxInstallments: 3,
+        minInstallmentValue: 500,
+      },
     },
     is_active: true,
     created_at: '2025-10-01T10:00:00Z'
@@ -639,10 +647,14 @@ export const initialRulers = [
     },
     agent_config: { 
       tone: 'friendly',
-      priority: 'high',
-      autoEscalate: false,
+      toneDescription: 'Comunicação equilibrada e acolhedora, construindo confiança desde o primeiro contato.',
       adaptiveTiming: true,
       negotiationEnabled: true,
+      negotiationPolicy: {
+        maxDiscount: 10,
+        maxInstallments: 4,
+        minInstallmentValue: 300,
+      },
     },
     is_active: true,
     created_at: '2025-10-01T10:00:00Z'

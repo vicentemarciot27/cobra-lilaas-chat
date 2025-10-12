@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Settings, Bot, Zap, Volume2, Target } from "lucide-react";
+import { Settings, Bot, Zap, Volume2 } from "lucide-react";
 import EnhancedTimelineVisualization from "@/components/workflow/EnhancedTimelineVisualization";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,10 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
-import { useData } from "@/contexts/DataContext";
+import { useData, AgentConfig } from "@/contexts/DataContext";
 import { getProfileEmoji, getProfileDescription } from "@/data/defaults";
-import { Tabs } from "@/components/ui/tabs";
-
+import { AgentSettingsDetail } from "@/components/workflow/AgentSettingsDetail";
 interface TimelineEvent {
   dayOffset: number;
   label: string;
@@ -23,14 +22,6 @@ interface TimelineEvent {
   };
   timeOfDay?: string;
   nodeType?: string; // For determining icon
-}
-
-interface AgentConfig {
-  tone: 'friendly' | 'neutral' | 'formal' | 'firm';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  autoEscalate: boolean;
-  adaptiveTiming: boolean;
-  negotiationEnabled: boolean;
 }
 
 interface WorkflowCohort {
@@ -79,14 +70,11 @@ const convertNodesToTimelineEvents = (nodes: any[]): TimelineEvent[] => {
 /**
  * Determines workflow color based on profile and priority
  */
-const getWorkflowColor = (profile: string, priority: string) => {
+const getWorkflowColor = (profile: string) => {
   if (profile === 'good_payer') {
     return 'bg-emerald-50 border-emerald-300';
   }
   if (profile === 'bad_payer') {
-    if (priority === 'urgent') {
-      return 'bg-red-50 border-red-300';
-    }
     return 'bg-orange-50 border-orange-300';
   }
   if (profile === 'new') {
@@ -100,7 +88,7 @@ const AgentConfigCard = ({
   cohortName, 
   cohortId, 
   rulerId, 
-  onConfigChange 
+  onConfigChange
 }: { 
   config: AgentConfig; 
   cohortName: string; 
@@ -109,6 +97,7 @@ const AgentConfigCard = ({
   onConfigChange: (rulerId: string, newConfig: AgentConfig) => void;
 }) => {
   const [localConfig, setLocalConfig] = useState(config);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Sync local state when config prop changes
   useEffect(() => {
@@ -132,26 +121,15 @@ const AgentConfigCard = ({
     }
   };
 
-  const getPriorityBadgeColor = (priority: string) => {
-    switch(priority) {
-      case 'low': return 'bg-gray-100 text-gray-800';
-      case 'medium': return 'bg-blue-100 text-blue-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'urgent': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   // Generate unique IDs for this specific card
   const toneId = `tone-${cohortId}`;
-  const priorityId = `priority-${cohortId}`;
-  const autoEscalateId = `auto-escalate-${cohortId}`;
   const adaptiveTimingId = `adaptive-timing-${cohortId}`;
   const negotiationId = `negotiation-${cohortId}`;
 
   return (
     <Card className="p-5 shadow-card border-2 bg-white">
-      <div className="flex items-center gap-3 mb-4 pb-3 border-b">
+      <div className="flex items-center gap-3 mb-4 pb-2 border-b">
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
           <Bot className="w-5 h-5 text-primary" />
         </div>
@@ -160,7 +138,12 @@ const AgentConfigCard = ({
             <h3 className="font-semibold text-sm">Agente IA</h3>
             <p className="text-xs text-muted-foreground">{cohortName}</p>
           </div>
-          <Settings className="w-4 h-4 text-muted-foreground mt-0.5 ml-2" />
+          <Button variant="outline" size="icon" className="border-none bg-transparent hover:bg-muted" onClick={(e) => {
+            e.stopPropagation();
+            setShowSettings(true);
+          }}>
+            <Settings className="w-4 h-4 text-muted-foreground" />
+          </Button>
         </div>
       </div>
 
@@ -182,52 +165,9 @@ const AgentConfigCard = ({
               <SelectItem value="firm">Firme</SelectItem>
             </SelectContent>
           </Select>
-          <Badge className={`text-xs ${getToneBadgeColor(localConfig.tone)}`}>
-            {localConfig.tone === 'friendly' ? '😊 Empático' : 
-             localConfig.tone === 'neutral' ? '😐 Objetivo' :
-             localConfig.tone === 'formal' ? '🎩 Profissional' : '💼 Assertivo'}
-          </Badge>
-        </div>
-
-        {/* Priority Selection */}
-        <div className="space-y-2">
-          <Label htmlFor={priorityId} className="text-xs flex items-center gap-2">
-            <Target className="w-3.5 h-3.5" />
-            Prioridade
-          </Label>
-          <Select value={localConfig.priority} onValueChange={(value: any) => handleConfigChange('priority', value)}>
-            <SelectTrigger id={priorityId} className="h-9 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">Baixa</SelectItem>
-              <SelectItem value="medium">Média</SelectItem>
-              <SelectItem value="high">Alta</SelectItem>
-              <SelectItem value="urgent">Urgente</SelectItem>
-            </SelectContent>
-          </Select>
-          <Badge className={`text-xs ${getPriorityBadgeColor(localConfig.priority)}`}>
-            {localConfig.priority === 'low' ? 'Sem pressa' :
-             localConfig.priority === 'medium' ? 'Atenção normal' :
-             localConfig.priority === 'high' ? 'Requer atenção' : '🚨 Máxima atenção'}
-          </Badge>
         </div>
 
         {/* Behavioral Toggles */}
-        <div className="space-y-3 pt-2 border-t">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-muted-foreground" />
-              <Label htmlFor={autoEscalateId} className="text-xs cursor-pointer">
-                Auto-escalação
-              </Label>
-            </div>
-            <Switch
-              id={autoEscalateId}
-              checked={localConfig.autoEscalate}
-              onCheckedChange={(checked) => handleConfigChange('autoEscalate', checked)}
-            />
-          </div>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -255,9 +195,18 @@ const AgentConfigCard = ({
               checked={localConfig.negotiationEnabled}
               onCheckedChange={(checked) => handleConfigChange('negotiationEnabled', checked)}
             />
-          </div>
         </div>
       </div>
+      <AgentSettingsDetail 
+        open={showSettings} 
+        onOpenChange={setShowSettings}
+        config={localConfig}
+        cohortName={cohortName}
+        onSave={(newConfig) => {
+          setLocalConfig(newConfig);
+          onConfigChange(rulerId, newConfig);
+        }}
+      />
     </Card>
   );
 };
@@ -292,7 +241,7 @@ export default function WorkflowsView() {
 
       // Get agent config and determine color
       const agentConfig = ruler.agent_config as AgentConfig;
-      const workflowColor = getWorkflowColor(ruler.profile_target, agentConfig.priority);
+      const workflowColor = getWorkflowColor(ruler.profile_target);
 
       return {
         id: ruler.profile_target,
@@ -309,7 +258,7 @@ export default function WorkflowsView() {
   }, [rulers, debtors]);
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="container mx-auto px-4 py-8 space-y-4">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Régua de Cobrança</h1>
