@@ -278,13 +278,12 @@ export default function Dashboard() {
       </Dialog>
 
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
+        <div className="container mx-auto px-4 py-8 space-y-8">
           {/* Header */}
           <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground text-lg">Visão geral da operação</p>
+            <h1 className="text-4xl font-bold tracking-tight">Painel Geral</h1>
+            <p className="text-muted-foreground text-lg">Visão geral dos seus devedores e cobranças</p>
           </div>
-
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Recovered */}

@@ -63,11 +63,11 @@ export const AgentSettingsDetail = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Configurações Detalhadas do Agente</DialogTitle>
+          <DialogTitle>Configurações Detalhadas da Lila</DialogTitle>
           <DialogDescription>
-            Configure os parâmetros avançados do agente de cobrança para <strong>{cohortName}</strong>
+            Configure como a Lila deve se comportar ao cobrar devedores do perfil <strong>{cohortName}</strong>
           </DialogDescription>
-        </DialogHeader>
+        </DialogHeader> 
         
         <div className="space-y-6 py-4">
           {/* Tone Description */}
@@ -88,7 +88,7 @@ export const AgentSettingsDetail = ({
               className="min-h-[100px] resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              Descreva como o agente deve se comunicar com este perfil de cliente. Esta descrição guiará o comportamento da IA.
+              Descreva como a Lila deve se comunicar com este perfil de cliente. Esta descrição guiará o comportamento das mensagens automáticas.
             </p>
           </div>
 

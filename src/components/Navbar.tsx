@@ -85,10 +85,10 @@ export function Navbar() {
     promisesToPay.filter(p => !p.fulfilled && new Date(p.promised_datetime) <= new Date()).length;
 
   const navLinks = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/canvas', label: 'Réguas' },
-    { href: '/knowledge', label: 'Base de Conhecimento' },
-    { href: '/analytics', label: 'Analytics' },
+    { href: '/dashboard', label: 'Painel Geral' },
+    { href: '/canvas', label: 'Réguas de Cobrança' },
+    { href: '/knowledge', label: 'Histórico de Casos' },
+    { href: '/analytics', label: 'Relatórios' },
   ];
 
   const isActive = (path: string) => {
@@ -233,7 +233,7 @@ export function Navbar() {
                 {knowledgeEntries.filter(k => k.status === 'pending').slice(0, 3).map(k => (
                   <DropdownMenuItem key={k.id}>
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">Nova extração de conhecimento</p>
+                      <p className="text-sm font-medium">Nova observação pendente</p>
                       <p className="text-xs text-muted-foreground">{k.title}</p>
                     </div>
                   </DropdownMenuItem>

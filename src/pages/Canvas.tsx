@@ -390,7 +390,7 @@ function CanvasFlow() {
               </Button>
               <div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold">Régua de Cobrança</h1>
+                  <h1 className="text-2xl font-bold">Editor de Régua</h1>
                   {currentRuler && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -420,7 +420,7 @@ function CanvasFlow() {
                     </DropdownMenu>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">Configure sua timeline de lembretes</p>
+                <p className="text-sm text-muted-foreground">Configure os lembretes automáticos para seus devedores</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -452,7 +452,7 @@ function CanvasFlow() {
             <Alert variant="destructive" className="mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Erro na timeline:</strong>
+                <strong>Erro na régua:</strong>
                 <ul className="list-disc list-inside mt-1">
                   {validationErrors.map((error, idx) => (
                     <li key={idx} className="text-sm">{error}</li>

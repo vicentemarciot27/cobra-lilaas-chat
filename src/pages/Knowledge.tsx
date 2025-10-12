@@ -63,25 +63,25 @@ export default function Knowledge() {
 
   const handleApprove = (id: string) => {
     approveKnowledge(id);
-    toast.success('Conhecimento aprovado');
+    toast.success('Observação aprovada');
   };
 
   const handleReject = (id: string) => {
     rejectKnowledge(id);
-    toast.success('Conhecimento rejeitado');
+    toast.success('Observação rejeitada');
   };
 
   const handleSave = (entry: KnowledgeEntry) => {
     if (editingEntry) {
       updateKnowledgeEntry(entry.id, entry);
-      toast.success('Conhecimento atualizado');
+      toast.success('Observação atualizada');
     } else {
       addKnowledgeEntry({
         ...entry,
         id: `k-${Date.now()}`,
         created_at: new Date().toISOString()
       });
-      toast.success('Conhecimento criado');
+      toast.success('Observação criada');
     }
     setEditingEntry(null);
     setIsAddDialogOpen(false);
@@ -91,22 +91,22 @@ export default function Knowledge() {
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Base de Conhecimento</h1>
-          <p className="text-muted-foreground">
-            Insights extraídos sobre cada devedor para personalizar estratégias
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold tracking-tight">Histórico de Casos</h1>
+          <p className="text-muted-foreground text-lg">
+            Informações e observações importantes sobre cada devedor
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Adicionar Conhecimento
+              Adicionar Observação
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Adicionar Conhecimento</DialogTitle>
+              <DialogTitle>Adicionar Observação</DialogTitle>
             </DialogHeader>
             <KnowledgeForm 
               entry={null}
@@ -125,7 +125,7 @@ export default function Knowledge() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar conhecimento..."
+                placeholder="Buscar observações..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -149,7 +149,7 @@ export default function Knowledge() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas Fontes</SelectItem>
-                <SelectItem value="ai">IA</SelectItem>
+                <SelectItem value="ai">Automática</SelectItem>
                 <SelectItem value="manual">Manual</SelectItem>
               </SelectContent>
             </Select>
@@ -224,7 +224,7 @@ export default function Knowledge() {
                     {entry.source === 'ai' ? (
                       <>
                         <Brain className="h-3 w-3" />
-                        <span>IA ({Math.round(entry.confidence_level * 100)}%)</span>
+                        <span>Automática</span>
                       </>
                     ) : (
                       <>
@@ -260,7 +260,7 @@ export default function Knowledge() {
                       </DialogTrigger>
                       <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                          <DialogTitle>Editar Conhecimento</DialogTitle>
+                          <DialogTitle>Editar Observação</DialogTitle>
                         </DialogHeader>
                         <KnowledgeForm 
                           entry={entry}
@@ -281,13 +281,13 @@ export default function Knowledge() {
       {filteredEntries.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Nenhum conhecimento encontrado</p>
+            <p className="text-muted-foreground">Nenhuma observação encontrada</p>
           </CardContent>
         </Card>
       )}
 
       <p className="text-sm text-muted-foreground text-center">
-        Mostrando {filteredEntries.length} de {knowledgeEntries.length} entradas
+        Mostrando {filteredEntries.length} de {knowledgeEntries.length} observações
       </p>
     </div>
   );

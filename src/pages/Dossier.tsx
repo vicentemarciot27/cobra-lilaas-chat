@@ -20,10 +20,12 @@ import {
   X,
   Sparkles,
   TrendingUp,
+  User,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
@@ -570,10 +572,27 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
           </Card>
 
           <Card className="shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Resumo Financeiro</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 mt-4">
+              {/* Profile Picture */}
+              <div className="flex justify-center pb-2">
+                {debtor.name === "Matheus Santoro" ? (
+                  <Avatar className="w-24 h-24 ring-2 ring-primary/20">
+                    <AvatarImage src="/matheus.jpeg" alt="Matheus Santoro" />
+                    <AvatarFallback className="text-2xl font-semibold">MS</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Avatar className="w-24 h-24 ring-2 ring-muted">
+                    <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/20 to-primary/5">
+                      {debtor.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+              
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Valor em Atraso</p>
                 <p className="text-3xl font-bold text-destructive">

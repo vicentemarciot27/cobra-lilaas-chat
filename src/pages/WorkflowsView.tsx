@@ -130,12 +130,12 @@ const AgentConfigCard = ({
   return (
     <Card className="p-5 shadow-card border-2 bg-white">
       <div className="flex items-center gap-3 mb-4 pb-2 border-b">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-          <Bot className="w-5 h-5 text-primary" />
+        <div className="w-8 rounded-full flex items-center justify-center">
+          <Bot className="w-5 text-primary" />
         </div>
         <div className="flex items-start justify-between w-full">
           <div>
-            <h3 className="font-semibold text-sm">Agente IA</h3>
+            <h3 className="font-semibold text-sm">Configuração da Lila</h3>
             <p className="text-xs text-muted-foreground">{cohortName}</p>
           </div>
           <Button variant="outline" size="icon" className="border-none bg-transparent hover:bg-muted" onClick={(e) => {
@@ -260,10 +260,10 @@ export default function WorkflowsView() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Régua de Cobrança</h1>
-        <p className="text-muted-foreground mt-2">
-          Com base em nossa análise de dados, aprendemos e sugerimos o melhor canal de comunicação com datas para lembretes de pagamentos.
+      <div className="space-y-1">
+        <h1 className="text-4xl font-bold tracking-tight">Réguas de Cobrança</h1>
+        <p className="text-muted-foreground text-lg">
+          Configure lembretes automáticos personalizados para cada perfil de devedor
         </p>
       </div>
 
@@ -290,11 +290,10 @@ export default function WorkflowsView() {
                     <div>
                       <h3 className="text-lg font-semibold">{workflow.name}</h3>
                       <p className="text-sm text-muted-foreground">{workflow.description}</p>
-                      <div className="mt-2">
-                        <Badge className="bg-primary text-primary-foreground">
-                          {workflow.activeCount} {workflow.activeCount === 1 ? 'cliente' : 'clientes'}
-                        </Badge>
-                      </div>
+                    </div>
+                    <div className="flex items-center ml-2 px-3 py-1 rounded-lg bg-muted border text-sm font-medium text-muted-foreground shadow-sm">
+                      <span className="font-semibold text-base text-primary">{workflow.activeCount}</span>
+                      <span className="ml-1">{workflow.activeCount === 1 ? "devedor" : "devedores"}</span>
                     </div>
                   </div>
                   <Button 

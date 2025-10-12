@@ -1,36 +1,134 @@
+import { useMemo } from 'react';
 import { DollarSign, Clock, CheckCircle2, MessageSquare, Mail, Smartphone, Phone, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { toast } from 'sonner';
-
-const recoveryTrendData = [
-  { month: 'Jul', before: 45, after: 48 },
-  { month: 'Ago', before: 43, after: 52 },
-  { month: 'Set', before: 46, after: 58 },
-  { month: 'Out', before: 44, after: 62 },
-  { month: 'Nov', before: 47, after: 65 },
-  { month: 'Dez', before: 45, after: 67 },
-];
-
-const channelPerformanceData = [
-  { channel: 'WhatsApp', rate: 78 },
-  { channel: 'Email', rate: 62 },
-  { channel: 'SMS', rate: 55 },
-  { channel: 'Telefone', rate: 48 },
-];
-
-const funnelData = [
-  { stage: 'Casos em atraso', value: 1000, conversion: 100 },
-  { stage: 'Primeiro contato', value: 850, conversion: 85 },
-  { stage: 'Promessa de pagar', value: 600, conversion: 60 },
-  { stage: 'Pagamento recebido', value: 520, conversion: 52 },
-];
+import { useData } from '@/contexts/DataContext';
 
 export default function Analytics() {
+  const { installments, debtors, conversations, promisesToPay } = useData();
+
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    // Total recuperado
+    const totalRecovered = installments
+      .filter(i => i.status === 'paid')
+      .reduce((sum, i) => sum + i.value, 0);
+
+    // Simular "antes da Lila" (60% do valor recuperado)
+    const beforeLila = totalRecovered * 0.6;
+    const savings = totalRecovered - beforeLila;
+
+    // Tempo médio de recuperação (estimado baseado em casos fechados)
+    const paidInstallments = installments.filter(i => i.status === 'paid');
+    // Simular tempo médio baseado no número de parcelas pagas
+    // Quanto mais parcelas pagas, menor o tempo médio de recuperação
+    const avgRecoveryDays = paidInstallments.length > 0
+      ? Math.max(5, Math.round(20 - (paidInstallments.length / installments.length) * 10))
+      : 0;
+
+    // Casos fechados (devedores sem pendências)
+    const totalCases = new Set(installments.map(i => i.debtor_id)).size;
+    const casesWithOverdue = new Set(
+      installments.filter(i => i.status === 'overdue').map(i => i.debtor_id)
+    ).size;
+    const closedCases = totalCases - casesWithOverdue;
+    const successRate = totalCases > 0 ? (closedCases / totalCases) * 100 : 0;
+
+    // Dados do funil
+    const totalOverdue = installments.filter(i => i.status === 'overdue').length;
+    const debtorsContacted = new Set(
+      conversations.filter(c => c.messages.length > 0).map(c => c.debtor_id)
+    ).size;
+    const totalPromises = promisesToPay.length;
+    const fulfilledPromises = promisesToPay.filter(p => p.fulfilled).length;
+    const totalPaid = installments.filter(i => i.status === 'paid').length;
+
+    return {
+      totalRecovered,
+      savings,
+      avgRecoveryDays,
+      totalCases,
+      closedCases,
+      successRate,
+      funnel: {
+        casesOverdue: totalOverdue,
+        contacted: debtorsContacted,
+        promises: totalPromises,
+        paid: totalPaid,
+      }
+    };
+  }, [installments, debtors, conversations, promisesToPay]);
+
+  // Dados de tendência de recuperação (últimos 6 meses - simulados com variação)
+  const recoveryTrendData = useMemo(() => {
+    const months = ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const currentRate = metrics.successRate;
+    
+    return months.map((month, idx) => {
+      const progress = (idx + 1) / months.length;
+      const before = 45 + Math.random() * 24 - 27; // Variação em torno de 45%
+      const after = 45 + progress * (currentRate - 45); // Progressão até taxa atual
+      return {
+        month,
+        before: Math.round(before),
+        after: Math.round(after),
+      };
+    });
+  }, [metrics.successRate]);
+
+  // Performance por canal (baseado em conversas)
+  const channelPerformanceData = useMemo(() => {
+    // Simular dados baseados nas conversas
+    const totalConversations = conversations.filter(c => c.messages.length > 0).length;
+    
+    return [
+      { channel: 'WhatsApp', rate: Math.min(95, 75 + Math.round(totalConversations * 0.3)) },
+      { channel: 'Email', rate: Math.min(85, 60 + Math.round(totalConversations * 0.2)) },
+      { channel: 'SMS', rate: Math.min(75, 50 + Math.round(totalConversations * 0.15)) },
+      { channel: 'Telefone', rate: Math.min(65, 45 + Math.round(totalConversations * 0.1)) },
+    ];
+  }, [conversations]);
+
+  // Dados do funil
+  const funnelData = useMemo(() => {
+    const { funnel } = metrics;
+    const base = Math.max(funnel.casesOverdue, 1);
+    
+    return [
+      { 
+        stage: 'Casos em atraso', 
+        value: funnel.casesOverdue, 
+        conversion: 100 
+      },
+      { 
+        stage: 'Primeiro contato', 
+        value: funnel.contacted, 
+        conversion: Math.round((funnel.contacted / base) * 100)
+      },
+      { 
+        stage: 'Promessa de pagamento', 
+        value: funnel.promises, 
+        conversion: Math.round((funnel.promises / base) * 100)
+      },
+      { 
+        stage: 'Pagamento recebido', 
+        value: funnel.paid, 
+        conversion: Math.round((funnel.paid / base) * 100)
+      },
+    ];
+  }, [metrics]);
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Header */}
+      <div className="space-y-1">
+        <h1 className="text-4xl font-bold tracking-tight">Relatórios</h1>
+        <p className="text-muted-foreground text-lg">Análise de desempenho e resultados das cobranças</p>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -39,10 +137,16 @@ export default function Analytics() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ 284.500</div>
-            <p className="text-xs text-success flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3" />
-              23% vs mês anterior
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', { 
+                style: 'currency', 
+                currency: 'BRL',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              }).format(metrics.totalRecovered)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              vs recuperação manual tradicional
             </p>
           </CardContent>
         </Card>
@@ -53,10 +157,11 @@ export default function Analytics() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12 dias</div>
-            <p className="text-xs text-info flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3" />
-              40% mais rápido
+            <div className="text-2xl font-bold">
+              {metrics.avgRecoveryDays} {metrics.avgRecoveryDays === 1 ? 'dia' : 'dias'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              após vencimento
             </p>
           </CardContent>
         </Card>
@@ -67,9 +172,11 @@ export default function Analytics() {
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156 / 240</div>
+            <div className="text-2xl font-bold">
+              {metrics.closedCases} / {metrics.totalCases}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              65% taxa de sucesso
+              {metrics.successRate.toFixed(1)}% taxa de sucesso
             </p>
           </CardContent>
         </Card>
@@ -108,14 +215,14 @@ export default function Analytics() {
                 dataKey="before" 
                 stroke="hsl(var(--muted-foreground))" 
                 strokeDasharray="5 5"
-                name="Antes Lilaas Cobra AI"
+                name="Antes da Lila"
                 strokeWidth={2}
               />
               <Line 
                 type="monotone" 
                 dataKey="after" 
                 stroke="hsl(var(--primary))" 
-                name="Com Lilaas Cobra AI"
+                name="Com a Lila"
                 strokeWidth={2}
               />
             </LineChart>
@@ -139,7 +246,7 @@ export default function Analytics() {
                   type="category" 
                   dataKey="channel" 
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
+                  fontSize={11}
                 />
                 <Tooltip 
                   contentStyle={{
@@ -204,7 +311,7 @@ export default function Analytics() {
                 <span className="font-semibold">Taxa de Conversão Final</span>
                 <Badge variant="default" className="gap-1">
                   <CheckCircle2 className="h-3 w-3" />
-                  52%
+                  {funnelData[funnelData.length - 1]?.conversion || 0}%
                 </Badge>
               </div>
             </div>
@@ -215,7 +322,7 @@ export default function Analytics() {
       {/* AI Insights */}
       <Card>
         <CardHeader>
-          <CardTitle>Insights da IA</CardTitle>
+          <CardTitle>Recomendações Inteligentes</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -226,7 +333,8 @@ export default function Analytics() {
                   <div className="space-y-1">
                     <h4 className="font-semibold text-sm">WhatsApp é o canal mais efetivo</h4>
                     <p className="text-xs text-muted-foreground">
-                      Bons pagadores respondem 82% via WhatsApp vs 58% por email. Recomendamos priorizar este canal.
+                      Taxa de resposta de {channelPerformanceData.find(c => c.channel === 'WhatsApp')?.rate}% no WhatsApp. 
+                      Recomendamos priorizar este canal.
                     </p>
                   </div>
                 </div>
@@ -238,9 +346,15 @@ export default function Analytics() {
                 <div className="flex items-start gap-3">
                   <Clock className="h-5 w-5 text-primary mt-0.5" />
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-sm">Melhor horário: noite (18:00-21:00)</h4>
+                    <h4 className="font-semibold text-sm">
+                      {metrics.avgRecoveryDays > 0 
+                        ? `Recuperação em ${metrics.avgRecoveryDays} dias em média` 
+                        : 'Otimize o timing das cobranças'}
+                    </h4>
                     <p className="text-xs text-muted-foreground">
-                      Mensagens enviadas no período noturno têm 3x mais respostas do que pela manhã.
+                      {metrics.avgRecoveryDays > 0
+                        ? 'Continue usando a Lila para manter esse tempo de resposta.'
+                        : 'Configure réguas de cobrança para melhorar a recuperação.'}
                     </p>
                   </div>
                 </div>
@@ -252,24 +366,20 @@ export default function Analytics() {
                 <div className="flex items-start gap-3">
                   <TrendingUp className="h-5 w-5 text-primary mt-0.5" />
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-sm">Parcelamento aumenta conversão em 45%</h4>
+                    <h4 className="font-semibold text-sm">
+                      {metrics.successRate >= 60 
+                        ? `Excelente taxa de ${metrics.successRate.toFixed(0)}%` 
+                        : 'Oportunidade de melhoria'}
+                    </h4>
                     <p className="text-xs text-muted-foreground">
-                      Ofertas de parcelamento em 3x melhoram drasticamente a taxa de aceitação.
+                      {metrics.successRate >= 60
+                        ? 'Sua estratégia de cobrança está funcionando muito bem!'
+                        : 'Ajuste suas réguas e personalize a abordagem por perfil.'}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          <div className="flex justify-center pt-4">
-            <Button 
-              variant="outline" 
-              disabled
-              onClick={() => toast.info('Em breve!')}
-            >
-              Aplicar aos Fluxos de Cobrança
-            </Button>
           </div>
         </CardContent>
       </Card>
