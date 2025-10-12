@@ -53,6 +53,7 @@ export interface Database {
           status: 'paid' | 'renegotiated' | 'overdue' | 'future'
           renegotiated_id: string | null
           created_at: string
+          payment_date: string | null
         }
         Insert: {
           id?: string
@@ -62,6 +63,7 @@ export interface Database {
           status?: 'paid' | 'renegotiated' | 'overdue' | 'future'
           renegotiated_id?: string | null
           created_at?: string
+          payment_date?: string | null
         }
         Update: {
           id?: string
@@ -71,6 +73,7 @@ export interface Database {
           status?: 'paid' | 'renegotiated' | 'overdue' | 'future'
           renegotiated_id?: string | null
           created_at?: string
+          payment_date?: string | null
         }
       }
       conversations: {
@@ -79,18 +82,21 @@ export interface Database {
           debtor_id: string
           created_at: string
           updated_at: string
+          payment_date: string | null
         }
         Insert: {
           id?: string
           debtor_id: string
           created_at?: string
           updated_at?: string
+          payment_date?: string | null
         }
         Update: {
           id?: string
           debtor_id?: string
           created_at?: string
           updated_at?: string
+          payment_date?: string | null
         }
       }
       messages: {

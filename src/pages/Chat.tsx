@@ -221,7 +221,7 @@ export default function Chat() {
       </div>
 
       {/* Chat Area */}
-      <Card className="h-[600px] flex flex-col">
+      <Card className="h-[900px] flex flex-col">
         <ScrollArea className="flex-1 p-6" ref={scrollRef}>
           <div className="space-y-4">
             {conversation?.messages.map((msg, idx) => (

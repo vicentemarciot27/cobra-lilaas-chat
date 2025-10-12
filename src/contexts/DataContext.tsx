@@ -9,6 +9,13 @@ import {
   initialRulers
 } from '@/data/defaults';
 
+// Importação do calculador de métricas centralizado
+import { 
+  calculateMetricsForMonth as calculateMetricsFromHelper, 
+  calculateTotalHistoricalRecovered,
+  MetricsData
+} from './metrics-helper';
+
 // Types
 export type DebtorProfile = 'good_payer' | 'bad_payer' | 'new';
 export type InstallmentStatus = 'paid' | 'renegotiated' | 'overdue' | 'future';
@@ -49,6 +56,7 @@ export interface Installment {
   status: InstallmentStatus;
   renegotiated_id?: string;
   created_at: string;
+  payment_date: string | null;
 }
 
 export interface Message {
@@ -117,6 +125,8 @@ interface DataContextType {
   rulers: Ruler[];
   isLoading: boolean;
   error: Error | null;
+  metrics: MetricsData;
+  getMetricsForMonth: (month: number, year: number) => MetricsData;
   refreshData: () => Promise<void>;
   addDebtor: (debtor: Omit<Debtor, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateDebtor: (id: string, updates: Partial<Debtor>) => Promise<void>;
@@ -314,6 +324,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Wrapper para o calculador centralizado
+  const calculateMetricsForMonth = (month: number, year: number) => {
+    return calculateMetricsFromHelper(month, year, {
+      debtors,
+      installments,
+      conversations,
+      promisesToPay
+    });
+  };
+
+  const metrics: MetricsData = useMemo(() => {
+    // Usar a data atual para o cálculo de métricas padrão
+    const now = new Date('2025-10-12'); // Data atual conforme especificado
+    return calculateMetricsForMonth(now.getMonth(), now.getFullYear());
+  }, [debtors, installments, conversations, promisesToPay]);
+  
+  // Função para obter métricas para qualquer mês
+  const getMetricsForMonth = (month: number, year: number): MetricsData => {
+    return calculateMetricsForMonth(month, year);
+  };
+  
   const value = useMemo(() => ({
     debtors,
     installments,
@@ -323,6 +354,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     rulers,
     isLoading,
     error,
+    metrics,
+    getMetricsForMonth,
     refreshData,
     addDebtor,
     updateDebtor,
@@ -337,7 +370,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateRuler,
     deleteRuler,
     addRuler
-  }), [debtors, installments, conversations, knowledgeEntries, promisesToPay, rulers, isLoading, error]);
+  }), [debtors, installments, conversations, knowledgeEntries, promisesToPay, rulers, isLoading, error, metrics]);
 
   return (
     <DataContext.Provider value={value}>

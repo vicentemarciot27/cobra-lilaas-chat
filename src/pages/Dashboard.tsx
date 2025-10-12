@@ -1,11 +1,12 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, TrendingUp, Users, Receipt, CheckCircle2, XCircle, Clock, Upload, Search, ArrowUpRight, Sparkles, MessageCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Receipt, CheckCircle2, XCircle, Clock, Upload, Search, ArrowUpRight, Sparkles, MessageCircle, Calendar, ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useData } from '@/contexts/DataContext';
@@ -13,12 +14,71 @@ import { CsvImporter } from '@/components/CsvImporter';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
+// Componente para o cabeçalho ordenável das colunas
+interface ColumnHeaderProps {
+  title: string;
+  onSort: (direction: 'asc' | 'desc') => void;
+  activeSortField?: string;
+  sortDirection?: 'asc' | 'desc';
+  field: string;
+}
+
+const SortableColumnHeader: React.FC<ColumnHeaderProps> = ({ 
+  title, 
+  onSort, 
+  activeSortField, 
+  sortDirection,
+  field 
+}) => {
+  const isActive = activeSortField === field;
+  
+  return (
+    <div className="flex items-center font-semibold cursor-pointer" onClick={() => {
+      onSort(isActive && sortDirection === 'asc' ? 'desc' : 'asc');
+    }}>
+      <span>{title}</span>
+      {isActive ? (
+        sortDirection === 'asc' ? (
+          <ArrowUp className="ml-1 h-4 w-4" />
+        ) : (
+          <ArrowDown className="ml-1 h-4 w-4" />
+        )
+      ) : (
+        <ChevronsUpDown className="ml-1 h-4 w-4 opacity-50" />
+      )}
+    </div>
+  );
+};
+
 export default function Dashboard() {
-  const { debtors, installments, conversations, addDebtor } = useData();
+  const { debtors, installments, conversations, addDebtor, metrics, getMetricsForMonth } = useData();
   const [search, setSearch] = useState('');
   const [profileFilter, setProfileFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Estado para controlar o mês selecionado para análise
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    // Por padrão, mostrar setembro (índice 9)
+    return { month: 8, year: 2025, label: 'Setembro/2025' };
+  });
+  
+  // Obter métricas para o mês selecionado
+  const currentMetrics = useMemo(() => {
+    return getMetricsForMonth(selectedMonth.month, selectedMonth.year);
+  }, [getMetricsForMonth, selectedMonth.month, selectedMonth.year]);
+  
+  // Função para ordenar as colunas
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const csvFields = [
     { label: 'Nome', value: 'name', required: true },
@@ -86,39 +146,12 @@ export default function Dashboard() {
     }
   };
 
-  const metrics = useMemo(() => {
-    // Total recuperado = todas as parcelas pagas (não apenas do mês atual)
-    const totalRecovered = installments
-      .filter(i => i.status === 'paid')
-      .reduce((sum, i) => sum + i.value, 0);
-
-    const pendingPayments = installments
-      .filter(i => i.status === 'overdue')
-      .reduce((sum, i) => sum + i.value, 0);
-
-    const paidCount = installments.filter(i => i.status === 'paid').length;
-    const overdueCount = installments.filter(i => i.status === 'overdue').length;
-    const recoveryRate = paidCount + overdueCount > 0 
-      ? (paidCount / (paidCount + overdueCount)) * 100 
-      : 0;
-
-    const activeCases = new Set(
-      installments.filter(i => i.status === 'overdue').map(i => i.debtor_id)
-    ).size;
-
-    return {
-      totalRecovered,
-      pendingPayments,
-      recoveryRate,
-      activeCases
-    };
-  }, [installments]);
 
   // Show welcome modal with confetti on first load
   useEffect(() => {
     const hasShownWelcome = localStorage.getItem('hasShownWelcome');
     
-    if (!hasShownWelcome && metrics.totalRecovered > 0) {
+    if (!hasShownWelcome && currentMetrics.totalRecovered > 0) {
       setShowWelcomeModal(true);
       localStorage.setItem('hasShownWelcome', 'true');
       
@@ -153,10 +186,11 @@ export default function Dashboard() {
         });
       }, 250);
     }
-  }, [metrics.totalRecovered]);
+  }, [currentMetrics.totalRecovered]);
 
   const filteredDebtors = useMemo(() => {
-    return debtors
+    // Primeiro filtramos com base nos critérios de busca
+    const filtered = debtors
       .filter(debtor => {
         const matchesSearch = search === '' || 
           debtor.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -171,28 +205,113 @@ export default function Dashboard() {
           (statusFilter === 'current' && !hasOverdue);
 
         return matchesSearch && matchesProfile && matchesStatus;
-      })
-      .sort((a, b) => {
-        // Matheus Santoro sempre no topo
-        if (a.name === 'Matheus Santoro') return -1;
-        if (b.name === 'Matheus Santoro') return 1;
-        return 0;
       });
-  }, [debtors, search, profileFilter, statusFilter, installments]);
+
+    // Função de ordenação personalizada
+    const getSortValue = (debtor: any, field: string) => {
+      // Calculamos valores específicos dependendo do campo
+      if (field === 'status') {
+        // Status ordena pelo atraso (em dias) da parcela mais antiga em atraso
+        const debtorInstallments = installments
+          .filter(i => i.debtor_id === debtor.id && i.status === 'overdue')
+          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+        
+        if (debtorInstallments.length === 0) return 0;
+        
+        const earliest = debtorInstallments[0];
+        return Math.floor(
+          (new Date().getTime() - new Date(earliest.due_date).getTime()) / (1000 * 60 * 60 * 24)
+        );
+      }
+      
+      if (field === 'amount') {
+        // Ordenar por valor total devido
+        return installments
+          .filter(i => i.debtor_id === debtor.id && i.status === 'overdue')
+          .reduce((sum, i) => sum + i.value, 0);
+      }
+      
+      if (field === 'profile') {
+        // Ordenar por tipo de perfil (prioridade: bad_payer, new, good_payer)
+        const profileOrder = { bad_payer: 1, new: 2, good_payer: 3 };
+        return profileOrder[debtor.profile] || 999;
+      }
+      
+      // Para outros campos, usamos o valor direto
+      return debtor[field];
+    };
+    
+    // Aplicar ordenação se um campo estiver selecionado
+    if (sortField) {
+      return [...filtered].sort((a, b) => {
+        const aValue = getSortValue(a, sortField);
+        const bValue = getSortValue(b, sortField);
+        
+        if (aValue === bValue) {
+          // Em caso de valores iguais, Matheus Santoro primeiro
+          if (a.name === 'Matheus Santoro') return -1;
+          if (b.name === 'Matheus Santoro') return 1;
+          
+          return 0;
+        }
+        
+        // Ordenação baseada na direção
+        const modifier = sortDirection === 'asc' ? 1 : -1;
+        
+        // Tratamos strings e números de forma diferente
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return modifier * aValue.localeCompare(bValue);
+        }
+        
+        return modifier * (aValue > bValue ? 1 : -1);
+      });
+    }
+    
+    // Ordenação padrão quando nenhum campo está selecionado
+    return [...filtered].sort((a, b) => {
+      // Matheus Santoro sempre no topo quando não há ordenação específica
+      if (a.name === 'Matheus Santoro') return -1;
+      if (b.name === 'Matheus Santoro') return 1;
+      
+      // Ordenar por status de atraso depois
+      const aInstallments = installments.filter(i => i.debtor_id === a.id);
+      const bInstallments = installments.filter(i => i.debtor_id === b.id);
+      const aHasOverdue = aInstallments.some(i => i.status === 'overdue');
+      const bHasOverdue = bInstallments.some(i => i.status === 'overdue');
+      
+      if (aHasOverdue && !bHasOverdue) return -1;
+      if (!aHasOverdue && bHasOverdue) return 1;
+      
+      // Depois por valor total devido
+      const aTotalDue = aInstallments
+        .filter(i => i.status === 'overdue')
+        .reduce((sum, i) => sum + i.value, 0);
+        
+      const bTotalDue = bInstallments
+        .filter(i => i.status === 'overdue')
+        .reduce((sum, i) => sum + i.value, 0);
+        
+      if (aTotalDue > bTotalDue) return -1;
+      if (aTotalDue < bTotalDue) return 1;
+      
+      // Por fim, em ordem alfabética
+      return a.name.localeCompare(b.name);
+    });
+  }, [debtors, search, profileFilter, statusFilter, installments, sortField, sortDirection]);
 
   const getDebtorStatus = (debtorId: string) => {
     const debtorInstallments = installments
       .filter(i => i.debtor_id === debtorId && i.status === 'overdue')
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
-    if (debtorInstallments.length === 0) return { label: 'Em dia', variant: 'default' as const };
+    if (debtorInstallments.length === 0) return { label: 'Em dia', variant: 'outline' as const };
     
     const earliest = debtorInstallments[0];
     const daysOverdue = Math.floor(
       (new Date().getTime() - new Date(earliest.due_date).getTime()) / (1000 * 60 * 60 * 24)
     );
     
-    return { label: `${daysOverdue}d atraso`, variant: 'destructive' as const };
+    return { label: `${daysOverdue}d atraso`, variant: 'secondary' as const };
   };
 
   const getLastContact = (debtorId: string) => {
@@ -215,19 +334,19 @@ export default function Dashboard() {
         return {
           icon: <CheckCircle2 className="h-3.5 w-3.5" />,
           label: 'Bom Pagador',
-          variant: 'default' as const,
+          variant: 'outline' as const,
         };
       case 'bad_payer':
         return {
           icon: <XCircle className="h-3.5 w-3.5" />,
           label: 'Mau Pagador',
-          variant: 'destructive' as const,
+          variant: 'default' as const,
         };
       case 'new':
         return {
           icon: <Clock className="h-3.5 w-3.5" />,
           label: 'Novo',
-          variant: 'outline' as const,
+          variant: 'secondary' as const,
         };
       default:
         return {
@@ -250,10 +369,10 @@ export default function Dashboard() {
                 {new Intl.NumberFormat('pt-BR', { 
                   style: 'currency', 
                   currency: 'BRL' 
-                }).format(metrics.totalRecovered)}
+                }).format(currentMetrics.totalRecovered)}
               </div>
               <p className="text-xl font-semibold">
-                Recuperamos este valor para você!
+                Este mês, recuperamos este valor para você!
               </p>
             </DialogDescription>
           </DialogHeader>
@@ -266,8 +385,19 @@ export default function Dashboard() {
                 +{new Intl.NumberFormat('pt-BR', { 
                   style: 'currency', 
                   currency: 'BRL' 
-                }).format(metrics.totalRecovered * 0.4)} extras
+                }).format(currentMetrics.totalRecovered * 0.4)} extras
               </p>
+              <div className="mt-4">
+                <p className="text-sm text-emerald-700">
+                  Em nossa história, a Lila já recuperou
+                </p>
+                <p className="text-xl font-bold text-emerald-900">
+                  {new Intl.NumberFormat('pt-BR', { 
+                    style: 'currency', 
+                    currency: 'BRL' 
+                  }).format(currentMetrics.totalHistoricalRecovered)}
+                </p>
+              </div>
             </div>
             <Button onClick={() => setShowWelcomeModal(false)} className="w-full">
               Continuar
@@ -279,10 +409,39 @@ export default function Dashboard() {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 space-y-8">
           {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-4xl font-bold tracking-tight">Painel Geral</h1>
             <p className="text-muted-foreground text-lg">Visão geral dos seus devedores e cobranças</p>
           </div>
+          
+          <div>
+            <Select
+            
+              value={`${selectedMonth.month},${selectedMonth.year}`}
+              onValueChange={(value) => {
+                const [month, year] = value.split(',').map(Number);
+                const date = new Date(year, month);
+                const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                setSelectedMonth({ month, year, label });
+              }}
+            >
+              <SelectTrigger className="w-[180px] bg-white">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Mês de análise" />
+              </SelectTrigger>
+              <SelectContent>
+
+                <SelectItem value="8,2025">Setembro/2025</SelectItem>
+                <SelectItem value="7,2025">Agosto/2025</SelectItem>
+                <SelectItem value="6,2025">Julho/2025</SelectItem>
+                <SelectItem value="5,2025">Junho/2025</SelectItem>
+                <SelectItem value="4,2025">Junho/2025</SelectItem>
+                <SelectItem value="3,2025">Maio/2025</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Recovered */}
@@ -297,11 +456,13 @@ export default function Dashboard() {
                         currency: 'BRL',
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 0,
-                      }).format(metrics.totalRecovered)}
+                      }).format(currentMetrics.totalRecovered)}
                     </p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <TrendingUp className="h-3 w-3" />
-                      <span className="font-medium">+23% vs mês anterior</span>
+                      <span className="font-medium">
+                        {currentMetrics.recoveryGrowth > 0 ? '+' : ''}{currentMetrics.recoveryGrowth.toFixed(0)}% vs mês anterior
+                      </span>
                     </div>
                   </div>
                   <div className="rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 p-3">
@@ -323,11 +484,11 @@ export default function Dashboard() {
                         currency: 'BRL',
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 0,
-                      }).format(metrics.pendingPayments)}
+                      }).format(currentMetrics.pendingPayments)}
                     </p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Receipt className="h-3 w-3" />
-                      <span>{installments.filter(i => i.status === 'overdue').length} parcelas</span>
+                      <span>{currentMetrics.funnel.casesOverdue} parcelas</span>
                     </div>
                   </div>
                   <div className="rounded-full bg-gradient-to-br from-rose-500 to-rose-600 p-3">
@@ -343,10 +504,12 @@ export default function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Taxa de Recuperação</p>
-                    <p className="text-3xl font-bold tracking-tight">{metrics.recoveryRate.toFixed(1)}%</p>
+                    <p className="text-3xl font-bold tracking-tight">{currentMetrics.recoveryRate.toFixed(1)}%</p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <TrendingUp className="h-3 w-3" />
-                      <span className="font-medium">+12% vs mês anterior</span>
+                      <span className="font-medium">
+                        {currentMetrics.recoveryRateGrowth > 0 ? '+' : ''}{currentMetrics.recoveryRateGrowth.toFixed(0)}% vs mês anterior
+                      </span>
                     </div>
                   </div>
                   <div className="rounded-full bg-gradient-to-br from-blue-500 to-blue-600 p-3">
@@ -362,10 +525,10 @@ export default function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Casos Ativos</p>
-                    <p className="text-3xl font-bold tracking-tight">{metrics.activeCases}</p>
+                    <p className="text-3xl font-bold tracking-tight">{currentMetrics.activeCases} devedores</p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Users className="h-3 w-3" />
-                      <span>Com pagamentos pendentes</span>
+                      <span>Com mais de 30 dias de atraso</span>
                     </div>
                   </div>
                   <div className="rounded-full bg-gradient-to-br from-violet-500 to-violet-600 p-3">
@@ -429,12 +592,67 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-b">
-                      <TableHead className="font-semibold">Nome</TableHead>
-                      <TableHead className="font-semibold">CPF</TableHead>
-                      <TableHead className="font-semibold">Apartamento</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold">Perfil</TableHead>
-                      <TableHead className="text-right font-semibold">Ações</TableHead>
+                      <TableHead>
+                        <SortableColumnHeader 
+                          title="Nome" 
+                          field="name"
+                          onSort={(direction) => {
+                            setSortField('name');
+                            setSortDirection(direction);
+                          }}
+                          activeSortField={sortField || ''}
+                          sortDirection={sortDirection}
+                        />
+                      </TableHead>
+                      <TableHead>
+                        <SortableColumnHeader 
+                          title="CPF" 
+                          field="cpf"
+                          onSort={(direction) => {
+                            setSortField('cpf');
+                            setSortDirection(direction);
+                          }}
+                          activeSortField={sortField || ''}
+                          sortDirection={sortDirection}
+                        />
+                      </TableHead>
+                      <TableHead>
+                        <SortableColumnHeader 
+                          title="Apartamento" 
+                          field="apartment"
+                          onSort={(direction) => {
+                            setSortField('apartment');
+                            setSortDirection(direction);
+                          }}
+                          activeSortField={sortField || ''}
+                          sortDirection={sortDirection}
+                        />
+                      </TableHead>
+                      <TableHead>
+                        <SortableColumnHeader 
+                          title="Status" 
+                          field="status"
+                          onSort={(direction) => {
+                            setSortField('status');
+                            setSortDirection(direction);
+                          }}
+                          activeSortField={sortField || ''}
+                          sortDirection={sortDirection}
+                        />
+                      </TableHead>
+                      <TableHead>
+                        <SortableColumnHeader 
+                          title="Perfil" 
+                          field="profile"
+                          onSort={(direction) => {
+                            setSortField('profile');
+                            setSortDirection(direction);
+                          }}
+                          activeSortField={sortField || ''}
+                          sortDirection={sortDirection}
+                        />
+                      </TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

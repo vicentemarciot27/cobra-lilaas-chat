@@ -76,7 +76,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
     { id: "judicial", label: "Processos judiciais (Tribunais)", status: "pending", delay: 900 },
     { id: "protests", label: "Protestos em cartório", status: "pending", delay: 800 },
     { id: "debts", label: "Dívidas ativas (Receita Federal)", status: "pending", delay: 700 },
-    { id: "companies", label: "Quadro societário (Tratum)", status: "pending", delay: 1000 },
+    { id: "companies", label: "Quadro societário (Jusfy)", status: "pending", delay: 1000 },
     { id: "assets", label: "Patrimônio (Imóveis e Veículos)", status: "pending", delay: 900 },
     { id: "social", label: "Monitoramento de mídias sociais", status: "pending", delay: 800 },
   ]
@@ -207,7 +207,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
       doc.setTextColor(255, 255, 255)
       doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`, pageWidth - 15, 15, { align: "right" })
       doc.text("Documento Confidencial", pageWidth - 15, 20, { align: "right" })
-      doc.text("Powered by Tratum", pageWidth - 15, 25, { align: "right" })
+              doc.text("Powered by Jusfy", pageWidth - 15, 25, { align: "right" })
       
       // Reset text color
       doc.setTextColor(0, 0, 0)
@@ -403,7 +403,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
       doc.setFontSize(9)
       doc.setFont("helvetica", "italic")
       doc.setTextColor(100, 100, 100)
-      doc.text("Fonte: Tratum - Consulta aos Tribunais de Justiça", 20, yPos)
+      doc.text("Fonte: Jusfy - Consulta aos Tribunais de Justiça", 20, yPos)
       doc.setTextColor(0, 0, 0)
       yPos += 10
 
@@ -448,7 +448,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
       doc.setFontSize(9)
       doc.setFont("helvetica", "italic")
       doc.setTextColor(100, 100, 100)
-      doc.text("Fonte: Tratum - Consulta aos Cartórios de Protesto", 20, yPos)
+      doc.text("Fonte: Jusfy - Consulta aos Cartórios de Protesto", 20, yPos)
       doc.setTextColor(0, 0, 0)
       yPos += 10
 
@@ -493,7 +493,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
       doc.setFontSize(9)
       doc.setFont("helvetica", "italic")
       doc.setTextColor(100, 100, 100)
-      doc.text("Fonte: Tratum - Consulta integrada aos órgãos públicos e privados", 20, yPos)
+      doc.text("Fonte: Jusfy - Consulta integrada aos órgãos públicos e privados", 20, yPos)
       doc.setTextColor(0, 0, 0)
       yPos += 12
 
@@ -779,7 +779,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
       case "loading":
         return <Loader2 className="w-4 h-4 animate-spin text-primary" />
       case "completed":
-        return <CheckCircle2 className="w-4 h-4 text-green-600" />
+        return <CheckCircle2 className="w-4 h-4 text-emerald-600" />
       case "warning":
         return <AlertTriangle className="w-4 h-4 text-yellow-600" />
       case "not_found":
@@ -791,9 +791,9 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any; label: string }> = {
-      paid: { variant: "default", label: "Pago" },
+      paid: { variant: "outline", label: "Pago" },
       renegotiated: { variant: "default", label: "Renegociado" },
-      overdue: { variant: "destructive", label: "Em Atraso" },
+      overdue: { variant: "default", label: "Em Atraso" },
       future: { variant: "secondary", label: "Futuro" },
     }
     return variants[status] || variants.overdue
@@ -869,9 +869,9 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
                 <div className="flex items-center gap-3">
-                    <img src="/tratum.png" alt="Tratum" width={32} height={32} />
+                    <img src="/jusfy.png" alt="Jusfy" width={32} height={32} />
                   <div>
-                    <div className="font-semibold">Powered by Tratum</div>
+                    <div className="font-semibold">Powered by Jusfy</div>
                     <div className="text-xs text-muted-foreground">Análise reputacional e crédito</div>
                   </div>
                 </div>
@@ -990,7 +990,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
               
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Valor em Atraso</p>
-                <p className="text-3xl font-bold text-destructive">
+                <p className="text-3xl font-bold text-primary">
                   R$ {totalOwed.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -1078,7 +1078,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
                       const statusInfo = getStatusBadge(installment.status)
                       return (
                         <TableRow key={installment.id}>
-                          <TableCell>{new Date(installment.due_date).toLocaleDateString("pt-BR")}</TableCell>
+                          <TableCell>{new Date(new Date(installment.due_date).setDate(new Date(installment.due_date).getDate() + 1)).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}</TableCell>
                           <TableCell className="font-medium">
                             R$ {installment.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </TableCell>
@@ -1111,10 +1111,10 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <img src="/tratum.png" alt="Tratum" width={32} height={32} />
+                  <img src="/jusfy.png" alt="Jusfy" width={32} height={32} />
                 </div>
                 <div>
-                  <div className="font-semibold text-sm">Powered by Tratum</div>
+                  <div className="font-semibold text-sm">Powered by Jusfy</div>
                   <div className="text-xs text-muted-foreground">Análise reputacional e crédito</div>
                 </div>
               </div>
@@ -1151,48 +1151,48 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
                 <div className="grid grid-cols-3 gap-3">
                   <Card className="p-3">
                     <div className="text-xs text-muted-foreground mb-1">Processos Judiciais</div>
-                    <div className="text-xl font-bold text-red-600">{investigationData.judicialProcesses.length}</div>
+                    <div className="text-xl font-bold text-rose-600">{investigationData.judicialProcesses.length}</div>
                   </Card>
                   <Card className="p-3">
                     <div className="text-xs text-muted-foreground mb-1">Protestos</div>
-                    <div className="text-xl font-bold text-yellow-600">{investigationData.protests.length}</div>
+                    <div className="text-xl font-bold text-orange-600">{investigationData.protests.length}</div>
                   </Card>
                   <Card className="p-3">
                     <div className="text-xs text-muted-foreground mb-1">Score Risco</div>
-                    <div className="text-xl font-bold text-orange-600">{investigationData.riskScore}/100</div>
+                    <div className="text-xl font-bold text-yellow-600">{investigationData.riskScore}/100</div>
                   </Card>
                   <Card className="p-3">
                     <div className="text-xs text-muted-foreground mb-1">Empresas</div>
-                    <div className="text-xl font-bold text-blue-600">{investigationData.companies.length}</div>
+                    <div className="text-xl font-bold text-violet-600">{investigationData.companies.length}</div>
                   </Card>
                   <Card className="p-3">
                     <div className="text-xs text-muted-foreground mb-1">Imóveis</div>
-                    <div className="text-xl font-bold text-green-600">{investigationData.realEstate.length}</div>
+                    <div className="text-xl font-bold text-emerald-600">{investigationData.realEstate.length}</div>
                   </Card>
                   <Card className="p-3">
                     <div className="text-xs text-muted-foreground mb-1">Veículos</div>
-                    <div className="text-xl font-bold text-purple-600">{investigationData.vehicles.length}</div>
+                    <div className="text-xl font-bold text-blue-600">{investigationData.vehicles.length}</div>
                   </Card>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Card className="p-4 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                  <Card className="p-4 bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800">
                     <div className="text-xs text-muted-foreground mb-1">Dívidas Identificadas</div>
-                    <div className="text-lg font-bold text-red-600">
+                    <div className="text-lg font-bold text-rose-600">
                       R$ {investigationData.totalDebts.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </div>
                   </Card>
-                  <Card className="p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <Card className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
                     <div className="text-xs text-muted-foreground mb-1">Patrimônio Estimado</div>
-                    <div className="text-lg font-bold text-green-600">
+                    <div className="text-lg font-bold text-emerald-600">
                       R$ {investigationData.totalWealth.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </div>
                   </Card>
                 </div>
 
-                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <Card className="p-4 bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800">
                   <div className="text-sm font-semibold mb-2">Capacidade de Pagamento</div>
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-violet-600">
                     {((investigationData.totalWealth / investigationData.totalDebts) * 100).toFixed(0)}%
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
@@ -1201,14 +1201,14 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
                 </Card>
 
                 {investigationData.hasConfusaoPatrimonial && (
-                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-5 h-5 text-amber-600" />
-                      <div className="font-semibold text-amber-800 dark:text-amber-400">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                      <div className="font-semibold text-yellow-800 dark:text-yellow-400">
                         Alerta: Confusão Patrimonial
                       </div>
                     </div>
-                    <div className="text-sm text-amber-900 dark:text-amber-300">
+                    <div className="text-sm text-yellow-900 dark:text-yellow-300">
                       Detectada mistura de patrimônios pessoal e empresarial. Recomenda-se análise jurídica para
                       desconsideração da personalidade jurídica.
                     </div>
@@ -1217,10 +1217,10 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
 
                 <div className="text-xs text-muted-foreground text-center pt-2 border-t">
                   <div className="flex items-center justify-center gap-1 mt-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span>Dados atualizados via Tratum</span>
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Dados atualizados via Jusfy</span>
                   </div>
-                  <div className="text-[10px] opacity-70 mt-1">{new Date().toLocaleString("pt-BR")}</div>
+                  <div className="text-[10px] opacity-70 mt-1">{new Date().toLocaleString("pt-BR") }</div>
                 </div>
               </div>
             )}
@@ -1270,7 +1270,7 @@ export default function Dossier({ debtorId = "1" }: { debtorId?: string }) {
             </div>
             <div className="text-center space-y-2">
               <div className="font-medium">Compilando informações...</div>
-              <div className="text-sm text-muted-foreground">Gerando documento com dados da investigação Tratum</div>
+              <div className="text-sm text-muted-foreground">Gerando documento com dados da investigação Jusfy</div>
             </div>
             <Progress value={66} className="h-2" />
           </div>
